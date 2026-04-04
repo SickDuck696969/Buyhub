@@ -24,7 +24,12 @@
               {{ category.name }}
             </option>
           </select>
-          <input v-model="productForm.brand_id" type="text" placeholder="Brand ObjectId" required />
+          <select v-model="productForm.brand_id" required>
+            <option value="" disabled>Select brand</option>
+            <option v-for="brand in brands" :key="brand._id" :value="brand._id">
+              {{ brand.name }}
+            </option>
+          </select>
           <button :disabled="submittingProduct">{{ submittingProduct ? 'Saving...' : 'Create product' }}</button>
         </form>
       </div>
@@ -51,6 +56,25 @@
 
     <section class="admin-grid">
       <div class="card admin-panel">
+        <span class="pill">Brands</span>
+        <h2>Brands</h2>
+        <form class="form-grid compact" @submit.prevent="createBrand">
+          <input v-model="brandForm.name" type="text" placeholder="Brand name" required />
+          <input v-model="brandForm.description" type="text" placeholder="Description" />
+          <button :disabled="submittingBrand">{{ submittingBrand ? 'Saving...' : 'Add brand' }}</button>
+        </form>
+        <div class="tag-list">
+          <div v-for="brand in brands" :key="brand._id" class="tag-card">
+            <div>
+              <strong>{{ brand.name }}</strong>
+              <span>{{ brand.description || 'No description' }}</span>
+            </div>
+            <button class="button-danger" @click="removeBrand(brand._id)">Delete</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card admin-panel">
         <span class="pill">Inventory</span>
         <h2>Inventory</h2>
         <div class="inventory-list">
@@ -70,7 +94,9 @@
           </form>
         </div>
       </div>
+    </section>
 
+    <section class="admin-grid">
       <div class="card admin-panel">
         <span class="pill">Products</span>
         <h2>Products</h2>
@@ -78,7 +104,7 @@
           <div v-for="product in products" :key="product._id" class="product-admin-card">
             <div>
               <strong>{{ product.name }}</strong>
-              <span>{{ product.category_id?.name || 'No category' }}</span>
+              <span>{{ product.category_id?.name || 'No category' }} • {{ product.brand_id?.name || 'No brand' }}</span>
             </div>
             <div class="product-admin-actions">
               <strong>${{ Number(product.price || 0).toLocaleString() }}</strong>
@@ -96,14 +122,21 @@ import { onMounted, ref } from 'vue';
 import api from '../services/api';
 
 const categories = ref([]);
+const brands = ref([]);
 const inventory = ref([]);
 const products = ref([]);
 const message = ref('');
 const messageType = ref('success');
 const submittingProduct = ref(false);
 const submittingCategory = ref(false);
+const submittingBrand = ref(false);
 
 const categoryForm = ref({
+  name: '',
+  description: '',
+});
+
+const brandForm = ref({
   name: '',
   description: '',
 });
@@ -124,13 +157,15 @@ const setMessage = (type, text) => {
 
 const fetchDashboardData = async () => {
   try {
-    const [categoriesRes, inventoryRes, productsRes] = await Promise.all([
+    const [categoriesRes, brandsRes, inventoryRes, productsRes] = await Promise.all([
       api.get('/categories'),
+      api.get('/brands'),
       api.get('/inventory'),
       api.get('/products'),
     ]);
 
     categories.value = categoriesRes.data;
+    brands.value = brandsRes.data;
     inventory.value = inventoryRes.data;
     products.value = productsRes.data;
   } catch (err) {
@@ -178,6 +213,21 @@ const createCategory = async () => {
   }
 };
 
+const createBrand = async () => {
+  submittingBrand.value = true;
+
+  try {
+    await api.post('/brands', brandForm.value);
+    setMessage('success', 'Brand created successfully.');
+    brandForm.value = { name: '', description: '' };
+    await fetchDashboardData();
+  } catch (err) {
+    setMessage('error', err.response?.data?.message || 'Unable to create brand.');
+  } finally {
+    submittingBrand.value = false;
+  }
+};
+
 const removeCategory = async (categoryId) => {
   try {
     await api.delete(`/categories/${categoryId}`);
@@ -185,6 +235,16 @@ const removeCategory = async (categoryId) => {
     await fetchDashboardData();
   } catch (err) {
     setMessage('error', err.response?.data?.message || 'Unable to delete category.');
+  }
+};
+
+const removeBrand = async (brandId) => {
+  try {
+    await api.delete(`/brands/${brandId}`);
+    setMessage('success', 'Brand deleted.');
+    await fetchDashboardData();
+  } catch (err) {
+    setMessage('error', err.response?.data?.message || 'Unable to delete brand.');
   }
 };
 

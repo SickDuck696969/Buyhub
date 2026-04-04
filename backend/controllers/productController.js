@@ -34,7 +34,11 @@ const getProducts = async (req, res) => {
         // Pagination/Limit
         let limit = req.query.limit ? parseInt(req.query.limit) : 0; // 0 means no limit in Mongoose
         
-        const products = await Product.find(query).sort(sort).limit(limit).populate('category_id', 'name');
+        const products = await Product.find(query)
+            .sort(sort)
+            .limit(limit)
+            .populate('category_id', 'name')
+            .populate('brand_id', 'name');
         res.json(products);
     } catch (error) {
         res.status(500);
