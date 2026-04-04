@@ -1,71 +1,236 @@
 const User = require('../schemas/User');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const fs = require("fs");
+const path = require("path");
 
-const generateToken = (id) => {
-    return jwt.sign({ id }, process.env.JWT_SECRET, {
-        expiresIn: '30d',
+const privateKey = fs.readFileSync(path.join(__dirname, "../keys/private.key"));
+const publicKey = fs.readFileSync(path.join(__dirname, "../keys/public.key"));
+
+exports.login = async (req, res) => {
+  try {
+    const { username, password } = req.body;
+
+    const user = await User.findOne({ username });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (!user.status) {
+      return res.status(403).json({ message: "User is disabled" });
+    }
+
+    const match = await bcrypt.compare(password, user.password);
+
+    if (!match) {
+      return res.status(401).json({ message: "Wrong password" });
+    }
+
+    const token = jwt.sign(
+      {
+        id: user._id,
+        username: user.username,
+        role: user.role
+      },
+      privateKey,
+      {
+        algorithm: "RS256",
+        expiresIn: "1h"
+      }
+    );
+
+    user.loginCount += 1;
+    await user.save();
+
+    res.json({
+      message: "Login successful",
+      token,
+      loginCount: user.loginCount
     });
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
-const registerUser = async (req, res, next) => {
-    const { name, email, password } = req.body;
+exports.register = async (req, res) => {
+  try {
+    const { username, password, email, fullName, role } = req.body;
 
-    try {
-        const userExists = await User.findOne({ email });
+    const existingUser = await User.findOne({
+      $or: [{ username }, { email }]
+    });
 
-        if (userExists) {
-            res.status(400);
-            throw new Error('User already exists');
-        }
-
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
-
-        const user = await User.create({
-            name,
-            email,
-            password: hashedPassword,
-        });
-
-        if (user) {
-            res.status(201).json({
-                _id: user._id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                token: generateToken(user._id),
-            });
-        } else {
-            res.status(400);
-            throw new Error('Invalid user data');
-        }
-    } catch (error) {
-        next(error);
+    if (existingUser) {
+      return res.status(400).json({
+        message: "Username or email already exists"
+      });
     }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newUser = new User({
+      username,
+      password: hashedPassword,
+      email,
+      fullName,
+      role,
+      status: false
+    });
+
+    await newUser.save();
+
+    const userSafe = newUser.toObject();
+    delete userSafe.password;
+
+    res.status(201).json({
+      message: "User registered successfully",
+      data: userSafe
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      message: error.message
+    });
+  }
 };
 
-const loginUser = async (req, res, next) => {
-    const { email, password } = req.body;
+exports.authMiddleware = (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
 
-    try {
-        const user = await User.findOne({ email });
-
-        if (user && (await bcrypt.compare(password, user.password))) {
-            res.json({
-                _id: user._id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                token: generateToken(user._id),
-            });
-        } else {
-            res.status(401);
-            throw new Error('Invalid email or password');
-        }
-    } catch (error) {
-        next(error);
+    if (!authHeader) {
+      return res.status(401).json({
+        message: "No token provided"
+      });
     }
+
+    const token = authHeader.split(" ")[1];
+
+    const decoded = jwt.verify(token, publicKey, {
+      algorithms: ["RS256"]
+    });
+
+    req.user = decoded;
+    next();
+
+  } catch (error) {
+    return res.status(401).json({
+      message: "Invalid or expired token"
+    });
+  }
 };
 
-module.exports = { registerUser, loginUser };
+exports.authorizeAdmin = (req, res, next) => {
+  if (req.user.role !== "admin") {
+    return res.status(403).json({
+      message: "Forbidden: Admin only"
+    });
+  }
+  next();
+};
+
+exports.getMe = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id)
+      .select("-password")
+      .populate("role");
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found"
+      });
+    }
+
+    res.json({
+      message: "User profile",
+      data: user
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      message: error.message
+    });
+  }
+};
+
+exports.changePassword = async (req, res) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+
+    const user = await User.findById(req.user.id);
+
+    const match = await bcrypt.compare(oldPassword, user.password);
+
+    if (!match) {
+      return res.status(401).json({
+        message: "Old password incorrect"
+      });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    res.json({
+      message: "Password changed successfully"
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      message: error.message
+    });
+  }
+};
+
+exports.enableUser = async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found"
+      });
+    }
+
+    user.status = true;
+    await user.save();
+
+    res.json({
+      message: "User enabled successfully"
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      message: error.message
+    });
+  }
+};
+
+exports.disableUser = async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found"
+      });
+    }
+
+    user.status = false;
+    await user.save();
+
+    res.json({
+      message: "User disabled successfully"
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      message: error.message
+    });
+  }
+};

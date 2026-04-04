@@ -3,7 +3,7 @@ require('dotenv').config();
 
 const connectDB = async () => {
     try {
-        await mongoose.connect(process.env.MONGO_URI, {
+        await mongoose.connect('mongodb+srv://lazybone300_db_user:To8OFcuPArR4t6kK@cluster0.ivmiewn.mongodb.net/?appName=Cluster0', {
         });
         console.log('MongoDB connected');
     } catch (error) {
