@@ -15,6 +15,7 @@ const uploadRoutes = require('./routes/uploadRoutes');
 
 const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
+const brandRoutes = require('./routes/brandRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const cartRoutes = require('./routes/cartRoutes');
 const orderRoutes = require('./routes/orderRoutes');
@@ -29,6 +30,7 @@ app.use(express.urlencoded({ extended: true }));
 // Mount routers
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/brands', brandRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
