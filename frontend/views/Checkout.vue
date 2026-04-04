@@ -19,6 +19,13 @@
           <span>Shipping address</span>
           <textarea v-model="shippingAddress" placeholder="Street, district, city, country..." required />
         </label>
+        <label>
+          <span>Payment intent</span>
+          <select v-model="paymentStatus">
+            <option value="pending">Pending</option>
+            <option value="completed">Completed</option>
+          </select>
+        </label>
         <button :disabled="submitting">{{ submitting ? 'Placing order...' : 'Place order' }}</button>
         <div v-if="message" :class="['status-box', messageType]">{{ message }}</div>
       </form>
@@ -54,6 +61,7 @@ const router = useRouter();
 const cartStore = useCartStore();
 
 const shippingAddress = ref('');
+const paymentStatus = ref('pending');
 const submitting = ref(false);
 const message = ref('');
 const messageType = ref('success');
@@ -67,13 +75,24 @@ const placeOrder = async () => {
   message.value = '';
 
   try {
-    await api.post('/orders', {
+    const { data: order } = await api.post('/orders', {
       shippingAddress: shippingAddress.value,
     });
 
+    const { data: payment } = await api.post('/payments', {
+      orderId: order._id,
+    });
+
+    if (paymentStatus.value === 'completed') {
+      await api.put(`/payments/${payment._id}/status`, {
+        status: 'completed',
+        transaction_id: `SIM-${Date.now()}`,
+      });
+    }
+
     await cartStore.fetchCart();
     messageType.value = 'success';
-    message.value = 'Order created successfully. Redirecting to your order history...';
+    message.value = 'Order and payment created successfully. Redirecting...';
     setTimeout(() => {
       router.push('/orders');
     }, 900);

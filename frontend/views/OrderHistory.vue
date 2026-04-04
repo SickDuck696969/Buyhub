@@ -22,6 +22,12 @@
           </div>
           <strong class="order-total">${{ Number(order.total_amount || 0).toLocaleString() }}</strong>
         </div>
+        <div class="payment-row">
+          <span class="muted">Payment</span>
+          <strong :class="['payment-status', `payment-${order.payment?.status || 'none'}`]">
+            {{ order.payment?.status || 'not created' }}
+          </strong>
+        </div>
         <p class="shipping">{{ order.shipping_address }}</p>
         <div class="order-items">
           <div v-for="item in order.items || []" :key="item._id" class="order-item">
@@ -49,7 +55,24 @@ const fetchOrders = async () => {
 
   try {
     const { data } = await api.get('/orders');
-    orders.value = data;
+    const ordersWithPayments = await Promise.all(
+      data.map(async (order) => {
+        try {
+          const paymentResponse = await api.get(`/payments/order/${order._id}`);
+          return {
+            ...order,
+            payment: paymentResponse.data,
+          };
+        } catch (error) {
+          return {
+            ...order,
+            payment: null,
+          };
+        }
+      })
+    );
+
+    orders.value = ordersWithPayments;
   } catch (err) {
     error.value = err.response?.data?.message || 'Failed to fetch orders.';
   } finally {
@@ -97,6 +120,29 @@ onMounted(fetchOrders);
 .shipping {
   margin: 0;
   color: var(--text-muted);
+}
+
+.payment-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+}
+
+.payment-status {
+  text-transform: capitalize;
+}
+
+.payment-completed {
+  color: var(--success-color);
+}
+
+.payment-pending {
+  color: var(--warning-color);
+}
+
+.payment-failed {
+  color: var(--danger-color);
 }
 
 .order-items {

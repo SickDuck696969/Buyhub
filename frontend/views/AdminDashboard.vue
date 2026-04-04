@@ -113,6 +113,31 @@
           </div>
         </div>
       </div>
+
+      <div class="card admin-panel">
+        <span class="pill">Payments</span>
+        <h2>Payments</h2>
+        <div class="payment-list">
+          <form
+            v-for="payment in payments"
+            :key="payment._id"
+            class="payment-row"
+            @submit.prevent="savePaymentStatus(payment)"
+          >
+            <div>
+              <strong>Order {{ payment.order_id?._id?.slice(-6)?.toUpperCase() || 'N/A' }}</strong>
+              <span>${{ Number(payment.amount || 0).toLocaleString() }} • {{ payment.status }}</span>
+            </div>
+            <select v-model="payment.status">
+              <option value="pending">pending</option>
+              <option value="completed">completed</option>
+              <option value="failed">failed</option>
+            </select>
+            <input v-model="payment.transaction_id" type="text" placeholder="Transaction ID" />
+            <button>Save</button>
+          </form>
+        </div>
+      </div>
     </section>
   </div>
 </template>
@@ -125,6 +150,7 @@ const categories = ref([]);
 const brands = ref([]);
 const inventory = ref([]);
 const products = ref([]);
+const payments = ref([]);
 const message = ref('');
 const messageType = ref('success');
 const submittingProduct = ref(false);
@@ -157,17 +183,19 @@ const setMessage = (type, text) => {
 
 const fetchDashboardData = async () => {
   try {
-    const [categoriesRes, brandsRes, inventoryRes, productsRes] = await Promise.all([
+    const [categoriesRes, brandsRes, inventoryRes, productsRes, paymentsRes] = await Promise.all([
       api.get('/categories'),
       api.get('/brands'),
       api.get('/inventory'),
       api.get('/products'),
+      api.get('/payments'),
     ]);
 
     categories.value = categoriesRes.data;
     brands.value = brandsRes.data;
     inventory.value = inventoryRes.data;
     products.value = productsRes.data;
+    payments.value = paymentsRes.data;
   } catch (err) {
     setMessage('error', err.response?.data?.message || 'Failed to load admin dashboard data.');
   }
@@ -272,6 +300,19 @@ const deleteProduct = async (productId) => {
   }
 };
 
+const savePaymentStatus = async (payment) => {
+  try {
+    await api.put(`/payments/${payment._id}/status`, {
+      status: payment.status,
+      transaction_id: payment.transaction_id || '',
+    });
+    setMessage('success', 'Payment updated.');
+    await fetchDashboardData();
+  } catch (err) {
+    setMessage('error', err.response?.data?.message || 'Unable to update payment.');
+  }
+};
+
 onMounted(fetchDashboardData);
 </script>
 
@@ -303,7 +344,8 @@ onMounted(fetchDashboardData);
 
 .tag-list,
 .inventory-list,
-.product-admin-list {
+.product-admin-list,
+.payment-list {
   display: grid;
   gap: 0.8rem;
 }
@@ -331,6 +373,22 @@ onMounted(fetchDashboardData);
   grid-template-columns: 1.5fr 0.6fr 0.6fr auto;
 }
 
+.payment-row {
+  display: grid;
+  grid-template-columns: 1.3fr 0.6fr 0.9fr auto;
+  gap: 0.8rem;
+  align-items: center;
+  padding: 0.95rem 1rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.payment-row span {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--text-muted);
+}
+
 .product-admin-actions {
   display: flex;
   align-items: center;
@@ -341,6 +399,7 @@ onMounted(fetchDashboardData);
   .admin-grid,
   .form-grid.compact,
   .inventory-row,
+  .payment-row,
   .tag-card,
   .product-admin-card {
     grid-template-columns: 1fr;

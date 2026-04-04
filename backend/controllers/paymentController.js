@@ -2,6 +2,21 @@ const Payment = require('../schemas/Payment');
 const Order = require('../schemas/Order');
 const paymentService = require('../services/paymentService');
 
+// @desc    Get all payments
+// @route   GET /api/payments
+// @access  Private/Admin
+const getPayments = async (req, res, next) => {
+    try {
+        const payments = await Payment.find({})
+            .populate('order_id')
+            .sort({ createdAt: -1 });
+
+        res.json(payments);
+    } catch (error) {
+        next(error);
+    }
+};
+
 const canAccessOrderPayment = async (orderId, user) => {
     const order = await Order.findById(orderId);
 
@@ -114,6 +129,7 @@ const updatePaymentStatus = async (req, res, next) => {
 };
 
 module.exports = {
+    getPayments,
     createPayment,
     getPaymentById,
     getPaymentByOrderId,
