@@ -1,52 +1,67 @@
 <template>
-  <div class="home-page container">
-    <div class="layout-grid">
-      <!-- Sidebar for Categories -->
-      <aside class="sidebar card">
-        <h3 class="sidebar-title">Categories</h3>
-        <ul class="category-list">
-          <li 
-            class="category-item" 
-            :class="{ active: !selectedCategory }" 
-            @click="selectCategory('')"
-          >
-            All Products
-          </li>
-          <li 
-            v-for="cat in categories" 
-            :key="cat._id" 
-            class="category-item"
+  <div class="home-page container section-grid">
+    <section class="showcase-grid">
+      <aside class="filters card">
+        <div class="filters-header">
+          <span class="pill">Browse</span>
+          <h2>Products</h2>
+        </div>
+
+        <label class="field-group">
+          <span>Search products</span>
+          <input v-model="searchTerm" type="text" placeholder="Search by product name..." @keyup.enter="fetchProducts" />
+        </label>
+
+        <label class="field-group">
+          <span>Sort</span>
+          <select v-model="selectedSort" @change="fetchProducts">
+            <option value="">Newest arrivals</option>
+            <option value="price_asc">Price: low to high</option>
+            <option value="price_desc">Price: high to low</option>
+          </select>
+        </label>
+
+        <div class="categories-block">
+          <span class="field-label">Categories</span>
+          <button class="category-button" :class="{ active: !selectedCategory }" @click="selectCategory('')">
+            All products
+          </button>
+          <button
+            v-for="cat in categories"
+            :key="cat._id"
+            class="category-button"
             :class="{ active: selectedCategory === cat._id }"
             @click="selectCategory(cat._id)"
           >
             {{ cat.name }}
-          </li>
-        </ul>
+          </button>
+        </div>
+
+        <button @click="fetchProducts">Refresh catalog</button>
       </aside>
 
-      <!-- Main Content -->
-      <main class="main-content">
-        <!-- Top bar for sorting -->
-        <div class="top-bar card">
-          <span class="result-count">Showing {{ products.length }} products</span>
-          <div class="sort-options">
-            <label for="sort">Sort by: </label>
-            <select id="sort" v-model="selectedSort" @change="fetchProducts">
-              <option value="">Newest Arrivals</option>
-              <option value="price_asc">Price: Low to High</option>
-              <option value="price_desc">Price: High to Low</option>
-            </select>
+      <main class="catalog">
+        <div class="page-heading">
+          <div>
+            <span class="pill">Live inventory</span>
+            <h2 class="page-title">Catalog</h2>
+          </div>
+          <div class="catalog-stats">
+            <div class="card stat-card">
+              <strong>{{ categories.length }}</strong>
+              <span>categories</span>
+            </div>
+            <div class="card stat-card">
+              <strong>{{ products.length }}</strong>
+              <span>results</span>
+            </div>
           </div>
         </div>
 
-        <div v-if="loading" class="loading-state">
-          <p>Loading products...</p>
-        </div>
-        <div v-else-if="error" class="error-state">
-          <p>{{ error }}</p>
-        </div>
-        <div v-else-if="products.length === 0" class="empty-state">
-          <p>No products found.</p>
+        <div v-if="loading" class="status-box">Loading products...</div>
+        <div v-else-if="error" class="status-box error">{{ error }}</div>
+        <div v-else-if="products.length === 0" class="status-box warning">
+          No products matched your current filters.
         </div>
         <div v-else class="product-grid">
           <ProductCard
@@ -57,7 +72,7 @@
           />
         </div>
       </main>
-    </div>
+    </section>
   </div>
 </template>
 
@@ -75,6 +90,7 @@ const cartStore = useCartStore();
 
 const selectedCategory = ref('');
 const selectedSort = ref('');
+const searchTerm = ref('');
 
 const fetchCategories = async () => {
   try {
@@ -92,11 +108,12 @@ const fetchProducts = async () => {
     const params = {};
     if (selectedCategory.value) params.category = selectedCategory.value;
     if (selectedSort.value) params.sort = selectedSort.value;
+    if (searchTerm.value.trim()) params.search = searchTerm.value.trim();
 
     const { data } = await api.get('/products', { params });
     products.value = data;
   } catch (err) {
-    error.value = 'Failed to fetch products';
+    error.value = err.response?.data?.message || 'Failed to fetch products';
   } finally {
     loading.value = false;
   }
@@ -107,8 +124,12 @@ const selectCategory = (categoryId) => {
   fetchProducts();
 };
 
-const addToCart = (product) => {
-  cartStore.addToCart(product._id, 1);
+const addToCart = async (product) => {
+  try {
+    await cartStore.addToCart(product._id, 1);
+  } catch (err) {
+    error.value = typeof err === 'string' ? err : 'Unable to add product to cart.';
+  }
 };
 
 onMounted(() => {
@@ -118,89 +139,90 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.layout-grid {
+.showcase-grid {
   display: grid;
-  grid-template-columns: 250px 1fr;
-  gap: 20px;
-  align-items: start;
+  grid-template-columns: minmax(280px, 320px) 1fr;
+  gap: 1.25rem;
 }
 
-.sidebar {
-  padding: 15px 0;
+.filters {
+  padding: 1.2rem;
+  position: sticky;
+  top: 106px;
+  display: grid;
+  gap: 1rem;
+  align-self: start;
 }
 
-.sidebar-title {
-  padding: 0 15px;
-  margin-top: 0;
-  margin-bottom: 10px;
-  font-size: 16px;
-  color: var(--text-color);
+.filters-header h2 {
+  margin: 0.7rem 0 0;
 }
 
-.category-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+.field-group {
+  display: grid;
+  gap: 0.45rem;
 }
 
-.category-item {
-  padding: 10px 15px;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s;
-  color: var(--text-color);
-}
-
-.category-item:hover {
-  background: var(--background-color);
-}
-
-.category-item.active {
-  color: var(--primary-color);
-  font-weight: 500;
-  background: rgba(238, 77, 45, 0.05); /* very light primary */
-  border-left: 3px solid var(--primary-color);
-}
-
-.top-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px;
-  margin-bottom: 20px;
-}
-
-.result-count {
+.field-group span,
+.field-label {
   color: var(--text-muted);
+  font-size: 0.92rem;
+  font-weight: 700;
 }
 
-.sort-options select {
-  padding: 8px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius);
-  outline: none;
-  font-family: inherit;
+.categories-block {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.category-button {
+  justify-content: flex-start;
+  width: 100%;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-color);
+  padding-inline: 1rem;
+}
+
+.category-button.active {
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-strong));
+  color: #0c0c0c;
+}
+
+.catalog-stats {
+  display: flex;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.stat-card {
+  min-width: 120px;
+  padding: 1rem 1.1rem;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.stat-card strong {
+  font-size: 1.5rem;
+}
+
+.stat-card span {
+  color: var(--text-muted);
 }
 
 .product-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 15px;
-}
-
-.loading-state, .error-state, .empty-state {
-  text-align: center;
-  padding: 40px;
-  background: var(--surface-color);
-  border-radius: var(--border-radius);
-  color: var(--text-muted);
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
 }
 
 @media (max-width: 768px) {
-  .layout-grid {
+  .showcase-grid {
     grid-template-columns: 1fr;
   }
-  .sidebar {
-    margin-bottom: 15px;
+
+  .filters {
+    position: static;
   }
 }
 </style>

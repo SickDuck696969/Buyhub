@@ -1,24 +1,30 @@
 <template>
   <div class="product-card card">
-    <div class="image-wrapper">
-      <img :src="product.main_image || 'https://via.placeholder.com/200'" :alt="product.name" class="product-image" />
-    </div>
-    <div class="product-info">
-      <h3 class="product-name">{{ product.name }}</h3>
-      <p class="product-category" v-if="product.category_id">{{ product.category_id.name || 'Uncategorized' }}</p>
-      <div class="product-footer">
-        <span class="product-price">\${{ product.price }}</span>
-        <button class="add-btn" @click="addToCart" title="Add to Cart">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-            <path d="M0 1.5A.5.5 0 0 1 .5 1H2a.5.5 0 0 1 .485.379L2.89 3H14.5a.5.5 0 0 1 .491.592l-1.5 8A.5.5 0 0 1 13 12H4a.5.5 0 0 1-.491-.408L2.01 3.607 1.61 2H.5a.5.5 0 0 1-.5-.5M3.102 4l1.313 7h8.17l1.313-7zM5 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4m7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4m-7 1a1 1 0 1 1 0 2 1 1 0 0 1 0-2m7 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/>
-          </svg>
-        </button>
+    <router-link :to="`/product/${product._id}`" class="card-link">
+      <div class="image-wrapper">
+        <img :src="product.main_image || fallbackImage" :alt="product.name" class="product-image" />
       </div>
+      <div class="product-info">
+        <div class="product-meta">
+          <span class="pill">{{ product.category_id?.name || 'Featured' }}</span>
+        </div>
+        <h3 class="product-name">{{ product.name }}</h3>
+        <p class="product-description">{{ product.description || 'No description available yet.' }}</p>
+        <div class="product-footer">
+          <span class="product-price">${{ formatPrice(product.price) }}</span>
+        </div>
+      </div>
+    </router-link>
+    <div class="product-actions">
+      <button class="add-btn" @click="addToCart">Add to cart</button>
+      <router-link :to="`/product/${product._id}`" class="details-link">View details</router-link>
     </div>
   </div>
 </template>
 
 <script setup>
+const fallbackImage = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=900&q=80';
+
 defineProps({
   product: {
     type: Object,
@@ -31,27 +37,36 @@ const emit = defineEmits(['add-to-cart']);
 const addToCart = () => {
   emit('add-to-cart');
 };
+
+const formatPrice = (value) => Number(value || 0).toLocaleString();
 </script>
 
 <style scoped>
 .product-card {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: 1fr auto;
   overflow: hidden;
-  transition: transform 0.2s, box-shadow 0.2s;
-  height: 100%;
+  min-height: 100%;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
 }
 
 .product-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transform: translateY(-4px);
+  border-color: rgba(249, 168, 38, 0.28);
+  box-shadow: var(--shadow-hard);
+}
+
+.card-link {
+  display: grid;
 }
 
 .image-wrapper {
   width: 100%;
-  padding-top: 100%; /* 1:1 Aspect Ratio */
+  padding-top: 72%;
   position: relative;
-  background-color: #fafafa;
+  background:
+    linear-gradient(160deg, rgba(249, 168, 38, 0.25), rgba(255, 255, 255, 0.03)),
+    #111;
 }
 
 .product-image {
@@ -64,48 +79,66 @@ const addToCart = () => {
 }
 
 .product-info {
-  padding: 12px;
+  padding: 1rem;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.product-meta {
   display: flex;
-  flex-direction: column;
-  flex-grow: 1;
+  justify-content: flex-start;
 }
 
 .product-name {
-  margin: 0 0 4px 0;
-  font-size: 14px;
-  font-weight: 500;
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
   color: var(--text-color);
-  line-height: 1.4;
-  /* Multi-line truncation */
+  line-height: 1.2;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-.product-category {
-  font-size: 12px;
+.product-description {
+  margin: 0;
+  min-height: 3.1em;
+  font-size: 0.92rem;
   color: var(--text-muted);
-  margin: 0 0 10px 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .product-footer {
-  margin-top: auto;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
 .product-price {
-  font-size: 16px;
-  font-weight: bold;
+  font-size: 1.18rem;
+  font-weight: 900;
   color: var(--primary-color);
 }
 
+.product-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0 1rem 1rem;
+}
+
 .add-btn {
-  padding: 6px;
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
+  flex: 1;
+}
+
+.details-link {
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  font-weight: 700;
 }
 </style>

@@ -46,7 +46,9 @@ const getProducts = async (req, res) => {
 // @route   GET /api/products/:id
 // @access  Public
 const getProductById = async (req, res) => {
-    const product = await Product.findById(req.params.id);
+    const product = await Product.findById(req.params.id)
+        .populate('category_id', 'name')
+        .populate('brand_id', 'name');
 
     if (product) {
         res.json(product);
@@ -61,6 +63,11 @@ const getProductById = async (req, res) => {
 // @access  Private/Admin
 const createProduct = async (req, res) => {
     const { name, price, description, main_image, images, brand_id, category_id } = req.body;
+
+    if (!name || price === undefined || !description || !main_image || !brand_id || !category_id) {
+        res.status(400);
+        throw new Error('Missing required fields: name, price, description, main_image, brand_id, category_id');
+    }
 
     const product = new Product({
         name,
@@ -86,6 +93,11 @@ const updateProduct = async (req, res) => {
     const product = await Product.findById(req.params.id);
 
     if (product) {
+        if (!name || price === undefined || !description || !main_image || !brand_id || !category_id) {
+            res.status(400);
+            throw new Error('Missing required fields: name, price, description, main_image, brand_id, category_id');
+        }
+
         product.name = name;
         product.price = price;
         product.description = description;

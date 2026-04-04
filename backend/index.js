@@ -1,6 +1,7 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
+const cors = require('cors');
 
 // Load env vars
 dotenv.config();
@@ -21,7 +22,9 @@ const reviewRoutes = require('./routes/reviewRoutes');
 const inventoryRoutes = require('./routes/inventoryRoutes');
 
 // Body parser
+app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Mount routers
 app.use('/api/auth', authRoutes);
