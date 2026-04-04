@@ -13,7 +13,9 @@ const createOrder = async (req, res, next) => {
 
 const getUserOrders = async (req, res, next) => {
     try {
-        const orders = await Order.find({ user_id: req.user._id });
+        const orders = await Order.find({ user_id: req.user._id })
+            .populate('items')
+            .sort({ createdAt: -1 });
         res.json(orders);
     } catch (error) {
         next(error);
@@ -22,7 +24,9 @@ const getUserOrders = async (req, res, next) => {
 
 const getOrderById = async (req, res, next) => {
     try {
-        const order = await Order.findById(req.params.id).populate('user', 'name email');
+        const order = await Order.findById(req.params.id)
+            .populate('user_id', 'name email')
+            .populate('items');
 
         if (order) {
             res.json(order);
