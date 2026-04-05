@@ -44,11 +44,27 @@
         </form>
         <div class="tag-list">
           <div v-for="category in categories" :key="category._id" class="tag-card">
-            <div>
-              <strong>{{ category.name }}</strong>
-              <span>{{ category.description || 'No description' }}</span>
-            </div>
-            <button class="button-danger" @click="removeCategory(category._id)">Delete</button>
+            <template v-if="editingCategoryId === category._id">
+              <div class="inline-edit-grid">
+                <input v-model="categoryEditForm.name" type="text" placeholder="Category name" />
+                <input v-model="categoryEditForm.description" type="text" placeholder="Description" />
+              </div>
+              <div class="action-pair">
+                <button @click="updateCategory(category._id)">Save</button>
+                <button class="button-secondary" @click="cancelCategoryEdit">Cancel</button>
+                <button class="button-danger" @click="removeCategory(category._id)">Delete</button>
+              </div>
+            </template>
+            <template v-else>
+              <div>
+                <strong>{{ category.name }}</strong>
+                <span>{{ category.description || 'No description' }}</span>
+              </div>
+              <div class="action-pair">
+                <button class="button-secondary" @click="startCategoryEdit(category)">Edit</button>
+                <button class="button-danger" @click="removeCategory(category._id)">Delete</button>
+              </div>
+            </template>
           </div>
         </div>
       </div>
@@ -65,11 +81,27 @@
         </form>
         <div class="tag-list">
           <div v-for="brand in brands" :key="brand._id" class="tag-card">
-            <div>
-              <strong>{{ brand.name }}</strong>
-              <span>{{ brand.description || 'No description' }}</span>
-            </div>
-            <button class="button-danger" @click="removeBrand(brand._id)">Delete</button>
+            <template v-if="editingBrandId === brand._id">
+              <div class="inline-edit-grid">
+                <input v-model="brandEditForm.name" type="text" placeholder="Brand name" />
+                <input v-model="brandEditForm.description" type="text" placeholder="Description" />
+              </div>
+              <div class="action-pair">
+                <button @click="updateBrand(brand._id)">Save</button>
+                <button class="button-secondary" @click="cancelBrandEdit">Cancel</button>
+                <button class="button-danger" @click="removeBrand(brand._id)">Delete</button>
+              </div>
+            </template>
+            <template v-else>
+              <div>
+                <strong>{{ brand.name }}</strong>
+                <span>{{ brand.description || 'No description' }}</span>
+              </div>
+              <div class="action-pair">
+                <button class="button-secondary" @click="startBrandEdit(brand)">Edit</button>
+                <button class="button-danger" @click="removeBrand(brand._id)">Delete</button>
+              </div>
+            </template>
           </div>
         </div>
       </div>
@@ -102,14 +134,40 @@
         <h2>Products</h2>
         <div class="product-admin-list">
           <div v-for="product in products" :key="product._id" class="product-admin-card">
-            <div>
-              <strong>{{ product.name }}</strong>
-              <span>{{ product.category_id?.name || 'No category' }} • {{ product.brand_id?.name || 'No brand' }}</span>
-            </div>
-            <div class="product-admin-actions">
-              <strong>${{ Number(product.price || 0).toLocaleString() }}</strong>
-              <button class="button-danger" @click="deleteProduct(product._id)">Delete</button>
-            </div>
+            <template v-if="editingProductId === product._id">
+              <div class="product-edit-grid">
+                <input v-model="productEditForm.name" type="text" placeholder="Product name" />
+                <input v-model.number="productEditForm.price" type="number" min="0" placeholder="Price" />
+                <input v-model="productEditForm.main_image" type="text" placeholder="Main image URL" />
+                <select v-model="productEditForm.category_id">
+                  <option v-for="category in categories" :key="category._id" :value="category._id">
+                    {{ category.name }}
+                  </option>
+                </select>
+                <select v-model="productEditForm.brand_id">
+                  <option v-for="brand in brands" :key="brand._id" :value="brand._id">
+                    {{ brand.name }}
+                  </option>
+                </select>
+                <textarea v-model="productEditForm.description" placeholder="Description" />
+              </div>
+              <div class="action-pair">
+                <button @click="updateProduct(product._id)">Save</button>
+                <button class="button-secondary" @click="cancelProductEdit">Cancel</button>
+                <button class="button-danger" @click="deleteProduct(product._id)">Delete</button>
+              </div>
+            </template>
+            <template v-else>
+              <div>
+                <strong>{{ product.name }}</strong>
+                <span>{{ product.category_id?.name || 'No category' }} • {{ product.brand_id?.name || 'No brand' }}</span>
+              </div>
+              <div class="product-admin-actions">
+                <strong>${{ Number(product.price || 0).toLocaleString() }}</strong>
+                <button class="button-secondary" @click="startProductEdit(product)">Edit</button>
+                <button class="button-danger" @click="deleteProduct(product._id)">Delete</button>
+              </div>
+            </template>
           </div>
         </div>
       </div>
@@ -156,6 +214,9 @@ const messageType = ref('success');
 const submittingProduct = ref(false);
 const submittingCategory = ref(false);
 const submittingBrand = ref(false);
+const editingCategoryId = ref('');
+const editingBrandId = ref('');
+const editingProductId = ref('');
 
 const categoryForm = ref({
   name: '',
@@ -167,7 +228,26 @@ const brandForm = ref({
   description: '',
 });
 
+const categoryEditForm = ref({
+  name: '',
+  description: '',
+});
+
+const brandEditForm = ref({
+  name: '',
+  description: '',
+});
+
 const productForm = ref({
+  name: '',
+  price: '',
+  description: '',
+  main_image: '',
+  category_id: '',
+  brand_id: '',
+});
+
+const productEditForm = ref({
   name: '',
   price: '',
   description: '',
@@ -256,6 +336,54 @@ const createBrand = async () => {
   }
 };
 
+const startCategoryEdit = (category) => {
+  editingCategoryId.value = category._id;
+  categoryEditForm.value = {
+    name: category.name || '',
+    description: category.description || '',
+  };
+};
+
+const cancelCategoryEdit = () => {
+  editingCategoryId.value = '';
+  categoryEditForm.value = { name: '', description: '' };
+};
+
+const updateCategory = async (categoryId) => {
+  try {
+    await api.put(`/categories/${categoryId}`, categoryEditForm.value);
+    setMessage('success', 'Category updated.');
+    cancelCategoryEdit();
+    await fetchDashboardData();
+  } catch (err) {
+    setMessage('error', err.response?.data?.message || 'Unable to update category.');
+  }
+};
+
+const startBrandEdit = (brand) => {
+  editingBrandId.value = brand._id;
+  brandEditForm.value = {
+    name: brand.name || '',
+    description: brand.description || '',
+  };
+};
+
+const cancelBrandEdit = () => {
+  editingBrandId.value = '';
+  brandEditForm.value = { name: '', description: '' };
+};
+
+const updateBrand = async (brandId) => {
+  try {
+    await api.put(`/brands/${brandId}`, brandEditForm.value);
+    setMessage('success', 'Brand updated.');
+    cancelBrandEdit();
+    await fetchDashboardData();
+  } catch (err) {
+    setMessage('error', err.response?.data?.message || 'Unable to update brand.');
+  }
+};
+
 const removeCategory = async (categoryId) => {
   try {
     await api.delete(`/categories/${categoryId}`);
@@ -297,6 +425,44 @@ const deleteProduct = async (productId) => {
     await fetchDashboardData();
   } catch (err) {
     setMessage('error', err.response?.data?.message || 'Unable to delete product.');
+  }
+};
+
+const startProductEdit = (product) => {
+  editingProductId.value = product._id;
+  productEditForm.value = {
+    name: product.name || '',
+    price: product.price || '',
+    description: product.description || '',
+    main_image: product.main_image || '',
+    category_id: product.category_id?._id || product.category_id || '',
+    brand_id: product.brand_id?._id || product.brand_id || '',
+  };
+};
+
+const cancelProductEdit = () => {
+  editingProductId.value = '';
+  productEditForm.value = {
+    name: '',
+    price: '',
+    description: '',
+    main_image: '',
+    category_id: '',
+    brand_id: '',
+  };
+};
+
+const updateProduct = async (productId) => {
+  try {
+    await api.put(`/products/${productId}`, {
+      ...productEditForm.value,
+      images: productEditForm.value.main_image ? [productEditForm.value.main_image] : [],
+    });
+    setMessage('success', 'Product updated.');
+    cancelProductEdit();
+    await fetchDashboardData();
+  } catch (err) {
+    setMessage('error', err.response?.data?.message || 'Unable to update product.');
   }
 };
 
@@ -369,6 +535,12 @@ onMounted(fetchDashboardData);
   color: var(--text-muted);
 }
 
+.inline-edit-grid,
+.product-edit-grid {
+  display: grid;
+  gap: 0.7rem;
+}
+
 .inventory-row {
   grid-template-columns: 1.5fr 0.6fr 0.6fr auto;
 }
@@ -393,6 +565,13 @@ onMounted(fetchDashboardData);
   display: flex;
   align-items: center;
   gap: 0.8rem;
+}
+
+.action-pair {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
 }
 
 @media (max-width: 980px) {
