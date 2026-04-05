@@ -9,13 +9,24 @@ export const useAuthStore = defineStore('auth', {
     getters: {
         isAuthenticated: (state) => !!state.token,
         isAdmin: (state) => state.user?.role === 'admin',
-        displayName: (state) => state.user?.name || state.user?.email || 'Guest',
+        displayName: (state) => state.user?.fullName || state.user?.username || state.user?.email || 'Guest',
     },
     actions: {
         async login(email, password) {
             try {
                 const { data } = await api.post('/auth/login', { email, password });
-                this.setSession(data);
+                const profileResponse = await api.get('/auth/me', {
+                    headers: {
+                        Authorization: `Bearer ${data.token}`,
+                    },
+                });
+
+                this.setSession({
+                    ...profileResponse.data.data,
+                    token: data.token,
+                    loginCount: data.loginCount,
+                });
+
                 return data;
             } catch (error) {
                 throw error.response?.data?.message || error.message || 'Login failed';
@@ -23,8 +34,16 @@ export const useAuthStore = defineStore('auth', {
         },
         async register(name, email, password) {
             try {
-                const { data } = await api.post('/auth/register', { name, email, password });
-                this.setSession(data);
+                const username = email.split('@')[0];
+                const { data } = await api.post('/auth/register', {
+                    username,
+                    fullName: name,
+                    email,
+                    password,
+                    role: 'user',
+                });
+
+                await this.login(email, password);
                 return data;
             } catch (error) {
                 throw error.response?.data?.message || error.message || 'Registration failed';

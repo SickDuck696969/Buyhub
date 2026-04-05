@@ -4,8 +4,7 @@ const User = require('../schemas/User');
 
 const connectDB = async () => {
     try {
-        await mongoose.connect('mongodb+srv://lazybone300_db_user:To8OFcuPArR4t6kK@cluster0.ivmiewn.mongodb.net/?appName=Cluster0', {
-        });
+        await mongoose.connect(process.env.MONGO_URI);
         console.log('MongoDB connected');
         await User.syncIndexes();
         console.log('User indexes synced');
