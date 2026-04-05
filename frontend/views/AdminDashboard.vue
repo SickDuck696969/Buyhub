@@ -111,14 +111,14 @@
         <h2>Inventory</h2>
         <div class="inventory-list">
           <form
-            v-for="entry in inventory"
-            :key="entry._id || entry.product_id?._id"
+            v-for="entry in inventoryRows"
+            :key="entry.product_id"
             class="inventory-row"
             @submit.prevent="saveInventory(entry)"
           >
             <div>
-              <strong>{{ entry.product_id?.name || entry.product_id }}</strong>
-              <span class="muted">Product ID: {{ entry.product_id?._id || entry.product_id }}</span>
+              <strong>{{ entry.product_name }}</strong>
+              <span class="muted">Product ID: {{ entry.product_id }}</span>
             </div>
             <input v-model.number="entry.stock_quantity" type="number" min="0" placeholder="Stock" />
             <input v-model.number="entry.reserved_quantity" type="number" min="0" placeholder="Reserved" />
@@ -201,7 +201,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import api from '../services/api';
 
 const categories = ref([]);
@@ -254,6 +254,27 @@ const productEditForm = ref({
   main_image: '',
   category_id: '',
   brand_id: '',
+});
+
+const inventoryRows = computed(() => {
+  const inventoryMap = new Map(
+    inventory.value.map((entry) => {
+      const productId = entry.product_id?._id || entry.product_id;
+      return [productId, entry];
+    })
+  );
+
+  return products.value.map((product) => {
+    const existing = inventoryMap.get(product._id);
+
+    return {
+      _id: existing?._id || '',
+      product_id: product._id,
+      product_name: product.name,
+      stock_quantity: existing?.stock_quantity ?? 0,
+      reserved_quantity: existing?.reserved_quantity ?? 0,
+    };
+  });
 });
 
 const setMessage = (type, text) => {
@@ -406,8 +427,7 @@ const removeBrand = async (brandId) => {
 
 const saveInventory = async (entry) => {
   try {
-    const productId = entry.product_id?._id || entry.product_id;
-    await api.put(`/inventory/${productId}`, {
+    await api.put(`/inventory/${entry.product_id}`, {
       stock_quantity: Number(entry.stock_quantity || 0),
       reserved_quantity: Number(entry.reserved_quantity || 0),
     });
