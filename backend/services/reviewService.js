@@ -68,8 +68,10 @@ const updateReview = async (reviewId, userId, rating, comment, images) => {
         throw new Error('Review not found');
     }
 
-    if (review.user_id.toString() !== userId) {
-        throw new Error('User not authorized to update this review');
+    if (review.user_id._id.toString() !== userId.toString()) {
+        console.log("reviewid: " + review.user_id._id.toString());
+        console.log(userId.toString());
+        throw new Error('User not authorized to delete this review');
     }
 
     review.rating = rating;
@@ -93,7 +95,7 @@ const deleteReview = async (reviewId, userId) => {
         throw new Error('Review not found');
     }
 
-    if (review.user_id.toString() !== userId) {
+    if (review.user_id._id.toString() !== userId.toString()) {
         throw new Error('User not authorized to delete this review');
     }
 

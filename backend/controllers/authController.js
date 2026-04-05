@@ -9,9 +9,9 @@ const publicKey = fs.readFileSync(path.join(__dirname, "../keys/public.key"));
 
 exports.login = async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { email, password } = req.body;
 
-    const user = await User.findOne({ username });
+    const user = await User.findOne({ email });
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -30,7 +30,7 @@ exports.login = async (req, res) => {
     const token = jwt.sign(
       {
         id: user._id,
-        username: user.username,
+        email: user.email,
         role: user.role
       },
       privateKey,
@@ -76,7 +76,7 @@ exports.register = async (req, res) => {
       email,
       fullName,
       role,
-      status: false
+      status: true,
     });
 
     await newUser.save();
@@ -96,46 +96,10 @@ exports.register = async (req, res) => {
   }
 };
 
-exports.authMiddleware = (req, res, next) => {
-  try {
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader) {
-      return res.status(401).json({
-        message: "No token provided"
-      });
-    }
-
-    const token = authHeader.split(" ")[1];
-
-    const decoded = jwt.verify(token, publicKey, {
-      algorithms: ["RS256"]
-    });
-
-    req.user = decoded;
-    next();
-
-  } catch (error) {
-    return res.status(401).json({
-      message: "Invalid or expired token"
-    });
-  }
-};
-
-exports.authorizeAdmin = (req, res, next) => {
-  if (req.user.role !== "admin") {
-    return res.status(403).json({
-      message: "Forbidden: Admin only"
-    });
-  }
-  next();
-};
-
 exports.getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user.id)
       .select("-password")
-      .populate("role");
 
     if (!user) {
       return res.status(404).json({
@@ -226,6 +190,40 @@ exports.disableUser = async (req, res) => {
 
     res.json({
       message: "User disabled successfully"
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      message: error.message
+    });
+  }
+};
+
+exports.getAllUsers = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, search = "" } = req.query;
+
+    const query = {
+      $or: [
+        { username: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } }
+      ]
+    };
+
+    const users = await User.find(query)
+      .select("-password")
+      .populate("role")
+      .skip((page - 1) * limit)
+      .limit(Number(limit));
+
+    const total = await User.countDocuments(query);
+
+    res.json({
+      message: "All users",
+      currentPage: Number(page),
+      totalPages: Math.ceil(total / limit),
+      totalUsers: total,
+      data: users
     });
 
   } catch (error) {

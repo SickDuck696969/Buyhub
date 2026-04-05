@@ -1,7 +1,11 @@
 const jwt = require('jsonwebtoken');
 const User = require('../schemas/User');
+const fs = require("fs");
+const path = require("path");
+const publicKey = fs.readFileSync(path.join(__dirname, "../keys/public.key"));
 
 const protect = async (req, res, next) => {
+    console.log("AUTH HEADER:", req.headers.authorization);
     let token;
 
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
@@ -10,15 +14,17 @@ const protect = async (req, res, next) => {
             token = req.headers.authorization.split(' ')[1];
 
             // Verify token
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const decoded = jwt.verify(token, publicKey, {
+                algorithms: ["RS256"]
+            });
 
             // Get user from the token
             req.user = await User.findById(decoded.id).select('-password');
 
             next();
         } catch (error) {
-            console.error(error);
-            res.status(401).json({ message: 'Not authorized, token failed' });
+            console.error("JWT ERROR:", error.name, error.message);
+            res.status(401).json({ message: error.message });
         }
     }
 

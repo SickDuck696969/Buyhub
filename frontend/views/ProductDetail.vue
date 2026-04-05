@@ -5,7 +5,7 @@
     <template v-else-if="product">
       <section class="product-detail-grid">
         <div class="gallery card">
-          <img :src="product.main_image || fallbackImage" :alt="product.name" />
+          <img src="/uploads/products/sample.jpg" :alt="product.name" />
         </div>
 
         <div class="summary card">

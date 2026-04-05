@@ -7,7 +7,6 @@ const getProducts = async (req, res) => {
     try {
         let query = {};
         
-        // Search by name (case-insensitive)
         if (req.query.search) {
             query.name = {
                 $regex: req.query.search,
@@ -15,31 +14,41 @@ const getProducts = async (req, res) => {
             };
         }
 
-        // Filter by category (category_id)
         if (req.query.category) {
             query.category_id = req.query.category;
         }
 
+        if (req.query.minPrice || req.query.maxPrice) {
+            query.price = {};
+
+            if (req.query.minPrice && !isNaN(req.query.minPrice)) {
+                query.price.$gte = Number(req.query.minPrice);
+            }
+
+            if (req.query.maxPrice && !isNaN(req.query.maxPrice)) {
+                query.price.$lte = Number(req.query.maxPrice);
+            }
+        }
+
         let sort = {};
-        // Sort by price
         if (req.query.sort === 'price_asc') {
             sort.price = 1;
         } else if (req.query.sort === 'price_desc') {
             sort.price = -1;
         } else {
-            // Default sort newest first
             sort.createdAt = -1;
         }
 
-        // Pagination/Limit
-        let limit = req.query.limit ? parseInt(req.query.limit) : 0; // 0 means no limit in Mongoose
-        
+        let limit = req.query.limit ? parseInt(req.query.limit) : 0;
+
         const products = await Product.find(query)
             .sort(sort)
             .limit(limit)
             .populate('category_id', 'name')
             .populate('brand_id', 'name');
+
         res.json(products);
+
     } catch (error) {
         res.status(500);
         throw new Error('Server Error: ' + error.message);

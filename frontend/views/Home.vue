@@ -38,6 +38,27 @@
         </div>
 
         <button @click="fetchProducts">Refresh catalog</button>
+
+        <div class="price-range">
+          <span class="field-label">Price range</span>
+
+          <div class="price-inputs">
+            <input
+              v-model="minPrice"
+              type="number"
+              placeholder="Min"
+            />
+            <input
+              v-model="maxPrice"
+              type="number"
+              placeholder="Max"
+            />
+          </div>
+
+          <button class="price-btn" @click="fetchProducts">
+            Apply price filter
+          </button>
+        </div>
       </aside>
 
       <main class="catalog">
@@ -91,6 +112,8 @@ const cartStore = useCartStore();
 const selectedCategory = ref('');
 const selectedSort = ref('');
 const searchTerm = ref('');
+const minPrice = ref('');
+const maxPrice = ref('');
 
 const fetchCategories = async () => {
   try {
@@ -104,11 +127,16 @@ const fetchCategories = async () => {
 const fetchProducts = async () => {
   loading.value = true;
   error.value = null;
+
   try {
     const params = {};
+
     if (selectedCategory.value) params.category = selectedCategory.value;
     if (selectedSort.value) params.sort = selectedSort.value;
     if (searchTerm.value.trim()) params.search = searchTerm.value.trim();
+
+    if (minPrice.value !== '') params.minPrice = minPrice.value;
+    if (maxPrice.value !== '') params.maxPrice = maxPrice.value;
 
     const { data } = await api.get('/products', { params });
     products.value = data;
@@ -139,6 +167,25 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.price-range {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.price-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.price-inputs input {
+  width: 100%;
+}
+
+.price-btn {
+  width: 100%;
+}
+
 .showcase-grid {
   display: grid;
   grid-template-columns: minmax(280px, 320px) 1fr;

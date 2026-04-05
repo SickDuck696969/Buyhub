@@ -74,7 +74,7 @@ const removeFromCart = async (userId, cartItemId) => {
     const cart = await getCart(userId);
     const cartItem = await CartItem.findById(cartItemId);
 
-    if (!cartItem || !cart.items.includes(cartItem._id)) {
+    if (!cartItem || !cart.items.some(item => item.equals(cartItem._id))) {
         throw new Error('Cart item not found');
     }
 
@@ -97,7 +97,7 @@ const updateCartItemQuantity = async (userId, cartItemId, quantity) => {
     const cart = await getCart(userId);
     const cartItem = await CartItem.findById(cartItemId);
 
-    if (!cartItem || !cart.items.includes(cartItem._id)) {
+    if (!cartItem || !cart.items.some(item => item.equals(cartItem._id))) {
         throw new Error('Cart item not found');
     }
 
