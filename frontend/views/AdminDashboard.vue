@@ -210,6 +210,33 @@
           </form>
         </div>
       </div>
+      <div class="card admin-panel">
+    <span class="pill">Orders</span>
+    <h2>Orders Management</h2>
+    <div class="order-list">
+        <div v-for="order in orders" :key="order._id" class="order-row">
+            <div class="order-info">
+                <strong>Order #{{ order._id?.slice(-8)?.toUpperCase() || 'N/A' }}</strong>
+                <span>{{ order.user_id?.name || 'Unknown' }} • ${{ Number(order.total_amount || 0).toLocaleString() }}</span>
+                <span class="order-address">{{ order.shipping_address?.slice(0, 50) }}{{ order.shipping_address?.length > 50 ? '...' : '' }}</span>
+                <span class="order-date">{{ new Date(order.createdAt).toLocaleDateString() }}</span>
+            </div>
+            <div class="order-actions">
+                <select 
+                    v-model="order.status" 
+                    @change="updateOrderStatus(order._id, order.status)"
+                    :disabled="updatingOrderId === order._id"
+                >
+                    <option value="pending">Pending</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="shipping">Shipping</option>
+                    <option value="delivered">Delivered</option>
+                    <option value="cancelled">Cancelled</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
     </section>
   </div>
 </template>
@@ -231,6 +258,9 @@ const submittingBrand = ref(false);
 const editingCategoryId = ref('');
 const editingBrandId = ref('');
 const editingProductId = ref('');
+const orders = ref([]);
+const editingOrderId = ref('');
+const orderStatusForm = ref({});
 
 const categoryForm = ref({
   name: '',
@@ -298,24 +328,65 @@ const setMessage = (type, text) => {
 };
 
 const fetchDashboardData = async () => {
-  try {
-    const [categoriesRes, brandsRes, inventoryRes, productsRes, paymentsRes] = await Promise.all([
-      api.get('/categories'),
-      api.get('/brands'),
-      api.get('/inventory'),
-      api.get('/products'),
-      api.get('/payments'),
-    ]);
+    try {
+        const [categoriesRes, brandsRes, inventoryRes, productsRes, paymentsRes, ordersRes] = await Promise.all([
+            api.get('/categories'),
+            api.get('/brands'),
+            api.get('/inventory'),
+            api.get('/products'),
+            api.get('/payments'),
+            api.get('/orders/admin/all'),  // thêm vào
+        ]);
 
-    categories.value = categoriesRes.data;
-    brands.value = brandsRes.data;
-    inventory.value = inventoryRes.data;
-    products.value = productsRes.data;
-    payments.value = paymentsRes.data;
-  } catch (err) {
-    setMessage('error', err.response?.data?.message || 'Failed to load admin dashboard data.');
-  }
+        categories.value = categoriesRes.data;
+        brands.value = brandsRes.data;
+        inventory.value = inventoryRes.data;
+        products.value = productsRes.data;
+        payments.value = paymentsRes.data;
+        orders.value = ordersRes.data;  // thêm vào
+    } catch (err) {
+        setMessage('error', err.response?.data?.message || 'Failed to load admin dashboard data.');
+    }
 };
+
+const updateOrderStatus = async (orderId, newStatus) => {
+    try {
+        await api.put(`/orders/${orderId}/status`, { status: newStatus });
+        setMessage('success', 'Order status updated successfully.');
+        await fetchDashboardData();
+    } catch (err) {
+        setMessage('error', err.response?.data?.message || 'Unable to update order status.');
+    }
+};
+
+const fetchOrders = async () => {
+    try {
+        const response = await api.get('/orders/admin/all');
+        orders.value = response.data;
+    } catch (err) {
+        setMessage('error', err.response?.data?.message || 'Failed to load orders.');
+    }
+};
+
+// const fetchDashboardData = async () => {
+//   try {
+//     const [categoriesRes, brandsRes, inventoryRes, productsRes, paymentsRes] = await Promise.all([
+//       api.get('/categories'),
+//       api.get('/brands'),
+//       api.get('/inventory'),
+//       api.get('/products'),
+//       api.get('/payments'),
+//     ]);
+
+//     categories.value = categoriesRes.data;
+//     brands.value = brandsRes.data;
+//     inventory.value = inventoryRes.data;
+//     products.value = productsRes.data;
+//     payments.value = paymentsRes.data;
+//   } catch (err) {
+//     setMessage('error', err.response?.data?.message || 'Failed to load admin dashboard data.');
+//   }
+// };
 
 const submitProduct = async () => {
   submittingProduct.value = true;
@@ -644,5 +715,60 @@ onMounted(fetchDashboardData);
   .product-admin-card {
     grid-template-columns: 1fr;
   }
+}
+.order-list {
+    display: grid;
+    gap: 0.8rem;
+}
+
+.order-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.8rem;
+    align-items: center;
+    padding: 0.95rem 1rem;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.order-info {
+    display: grid;
+    gap: 0.3rem;
+}
+
+.order-info span {
+    display: block;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.order-address {
+    font-size: 0.8rem;
+    color: #888;
+}
+
+.order-date {
+    font-size: 0.75rem;
+    color: #666;
+}
+
+.order-actions select {
+    padding: 0.5rem;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    cursor: pointer;
+}
+
+.order-actions select:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+@media (max-width: 980px) {
+    .order-row {
+        grid-template-columns: 1fr;
+    }
 }
 </style>

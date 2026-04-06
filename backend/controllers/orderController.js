@@ -49,10 +49,22 @@ const updateOrderStatus = async (req, res, next) => {
     }
 };
 
+const getAllOrders = async (req, res, next) => {
+    try {
+        const orders = await Order.find({})
+            .populate('user_id', 'name email')
+            .populate('items')
+            .sort({ createdAt: -1 });
+        res.json(orders);
+    } catch (error) {
+        next(error);
+    }
+};
 
 module.exports = {
     createOrder,
     getUserOrders,
     getOrderById,
     updateOrderStatus,
+    getAllOrders,
 };
