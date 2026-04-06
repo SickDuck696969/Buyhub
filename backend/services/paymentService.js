@@ -1,5 +1,8 @@
 const Payment = require('../schemas/Payment');
 const Order = require('../schemas/Order');
+const CartItem = require('../schemas/CartItem');
+const cartService = require('./cartService');
+const mongoose = require('mongoose');
 
 /**
  * Create a new payment record for an order
@@ -7,9 +10,16 @@ const Order = require('../schemas/Order');
  * @returns {Promise<Payment>}
  */
 const createPayment = async (orderId) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
     const order = await Order.findById(orderId);
     if (!order) {
         throw new Error('Order not found');
+    }
+
+    const cart = await cartService.getCart(order.user_id);
+    if (!cart || cart.items.length === 0) {
+        throw new Error('Cart is empty');
     }
 
     const existingPayment = await Payment.findOne({ order_id: orderId });
@@ -27,6 +37,11 @@ const createPayment = async (orderId) => {
     order.payment_id = payment._id;
     await order.save();
 
+    await CartItem.deleteMany({ cart_id: cart._id }).session(session);
+    cart.items = [];
+    await cart.save({ session });
+    await session.commitTransaction();
+    session.endSession();
     return payment;
 };
 

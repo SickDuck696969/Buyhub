@@ -28,6 +28,9 @@ const orderSchema = new Schema({
         type: Schema.Types.ObjectId,
         ref: 'Payment',
     },
+    expiresAt: {
+        type: Date,
+    },
 }, { timestamps: true });
-
+orderSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 module.exports = mongoose.model('Order', orderSchema);

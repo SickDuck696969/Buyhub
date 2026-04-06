@@ -56,8 +56,10 @@ import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import api from '../services/api';
 import { useCartStore } from '../stores/cart';
+import { useRoute } from 'vue-router';
 
 const router = useRouter();
+const route = useRoute();
 const cartStore = useCartStore();
 
 const shippingAddress = ref('');
@@ -74,11 +76,13 @@ const placeOrder = async () => {
   submitting.value = true;
   message.value = '';
 
-  try {
-    const { data: order } = await api.post('/orders', {
-      shippingAddress: shippingAddress.value,
-    });
+  const { data: order } = await api.put(`/orders/${route.path.split('/').pop()}/status`, {
+        status: "pending",
+        expiresAt: null,
+        shippingAddress: shippingAddress.value
+  });
 
+  try {
     const { data: payment } = await api.post('/payments', {
       orderId: order._id,
     });
@@ -99,6 +103,7 @@ const placeOrder = async () => {
   } catch (err) {
     messageType.value = 'error';
     message.value = err.response?.data?.message || 'Unable to place this order.';
+    console.error("Checkout error:", err);
   } finally {
     submitting.value = false;
   }

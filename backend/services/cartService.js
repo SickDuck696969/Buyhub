@@ -101,14 +101,6 @@ const updateCartItemQuantity = async (userId, cartItemId, quantity) => {
         throw new Error('Cart item not found');
     }
 
-    const diff = quantity - cartItem.quantity;
-
-    if (diff > 0) {
-        await inventoryService.reserveStock(cartItem.product_id, diff);
-    } else {
-        await inventoryService.releaseStock(cartItem.product_id, -diff);
-    }
-
     cartItem.quantity = quantity;
     await cartItem.save();
 

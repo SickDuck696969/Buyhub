@@ -5,6 +5,7 @@ const Cart = require('../schemas/Cart');
 const CartItem = require('../schemas/CartItem');
 const Inventory = require('../schemas/Inventory');
 const cartService = require('./cartService');
+const inventoryService = require('./inventoryService')
 
 /**
  * Create a new order from the user's cart
@@ -52,27 +53,19 @@ const createOrder = async (userId, shippingAddress) => {
             items: orderItems.map(item => item._id),
             total_amount: totalAmount,
             shipping_address: shippingAddress,
+            expiresAt: new Date(Date.now() + 1800 * 1000)
         });
 
         for (const item of orderItems) {
             item.order_id = order._id;
             await item.save({ session });
         }
-
-        for (const item of orderItems) {
-            const inventory = await Inventory.findOne({ product_id: item.product_id }).session(session);
-            inventory.stock_quantity -= item.quantity;
-            inventory.reserved_quantity -= item.quantity;
-            inventory.sold_quantity += item.quantity;
-            await inventory.save({ session });
-        }
         
         await order.save({ session });
-        
-        // Clear cart
-        await CartItem.deleteMany({ cart_id: cart._id }).session(session);
-        cart.items = [];
-        await cart.save({ session });
+
+        for (const item of orderItems) {
+            await inventoryService.reserveStock(item.product_id._id);
+        }
 
         await session.commitTransaction();
         session.endSession();
@@ -127,12 +120,27 @@ const cancelOrder = async (orderId) => {
  * @param {string} status
  * @returns {Promise<Order>}
  */
-const updateOrderStatus = async (orderId, status) => {
+const updateOrderStatus = async (orderId, body) => {
     const order = await Order.findById(orderId);
     if (!order) {
         throw new Error('Order not found');
     }
-    order.status = status;
+    console.log(body);
+    if (body.status !== undefined) {
+        order.status = body.status;
+        const items = await OrderItem.find({ order_id: order._id });
+        for(const item of items){
+            inventoryService.reserveStock(item.product_id.toString());
+        }
+    }
+
+    if (body.expiresAt !== undefined) {
+        order.expiresAt = body.expiresAt;
+    }
+
+    if (body.shippingAddress !== undefined) {
+        order.shipping_address = body.shippingAddress;
+    }
     await order.save();
     return order;
 };

@@ -53,9 +53,9 @@
           <span>Subtotal</span>
           <strong>${{ Number(cartStore.subtotal).toLocaleString() }}</strong>
         </div>
-        <router-link to="/checkout">
-          <button class="checkout-button">Proceed to checkout</button>
-        </router-link>
+      <button class="checkout-button" @click="makeorder">
+        Proceed to checkout
+      </button>
       </aside>
     </section>
   </div>
@@ -65,6 +65,13 @@
 import { computed, onMounted } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import { useCartStore } from '../stores/cart';
+import { useRouter } from 'vue-router';
+import api from '../services/api';
+import { ref } from 'vue';
+
+const shippingAddress = ref('');
+
+const router = useRouter();
 
 const fallbackImage = 'https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?auto=format&fit=crop&w=900&q=80';
 
@@ -77,6 +84,17 @@ onMounted(() => {
     cartStore.fetchCart();
   }
 });
+
+const makeorder = async () => {
+  try {
+    const { data: order } = await api.post('/orders', {
+      shippingAddress: "placeholder",
+    });
+    router.push(`/checkout/${order._id}`);
+  } catch (err) {
+    console.error("Checkout error:", err);
+  }
+}
 
 const updateQuantity = async (cartItemId, value) => {
   const quantity = Math.max(Number(value) || 1, 1);

@@ -40,9 +40,9 @@ const getOrderById = async (req, res, next) => {
 };
 
 const updateOrderStatus = async (req, res, next) => {
-    const { status } = req.body;
+    console.log(req.body);
     try {
-        const order = await orderService.updateOrderStatus(req.params.id, status);
+        const order = await orderService.updateOrderStatus(req.params.id, req.body);
         res.json(order);
     } catch (error) {
         next(error);
