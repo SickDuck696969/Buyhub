@@ -110,6 +110,14 @@
         <span class="pill">Inventory</span>
         <h2>Inventory</h2>
         <div class="inventory-list">
+          <div class="inventory-row inventory-header">
+            <div><strong>Product Info</strong></div>
+            <div><strong>Stock</strong></div>
+            <div><strong>Reserved</strong></div>
+            <div style="text-align: center;"><strong>Sold</strong></div>
+            <div><strong>Action</strong></div>
+          </div>
+          
           <form
             v-for="entry in inventoryRows"
             :key="entry.product_id"
@@ -118,10 +126,16 @@
           >
             <div>
               <strong>{{ entry.product_name }}</strong>
-              <span class="muted">Product ID: {{ entry.product_id }}</span>
+              <br/>
+              <span :class="['muted', { 'text-danger': entry.stock_quantity - entry.reserved_quantity < 0 }]">
+                Available: {{ entry.stock_quantity - entry.reserved_quantity }}
+              </span>
             </div>
-            <input v-model.number="entry.stock_quantity" type="number" min="0" placeholder="Stock" />
-            <input v-model.number="entry.reserved_quantity" type="number" min="0" placeholder="Reserved" />
+            <input v-model.number="entry.stock_quantity" type="number" min="0" placeholder="Stock" title="Tổng kho (Stock)" />
+            <input v-model.number="entry.reserved_quantity" type="number" min="0" placeholder="Reserved" title="Đang giữ/Đặt cọc (Reserved)" />
+            <div class="sold-col">
+              {{ entry.sold_quantity }}
+            </div>
             <button>Save</button>
           </form>
         </div>
@@ -273,6 +287,7 @@ const inventoryRows = computed(() => {
       product_name: product.name,
       stock_quantity: existing?.stock_quantity ?? 0,
       reserved_quantity: existing?.reserved_quantity ?? 0,
+      sold_quantity: existing?.sold_quantity ?? 0,
     };
   });
 });
@@ -561,8 +576,34 @@ onMounted(fetchDashboardData);
   gap: 0.7rem;
 }
 
+/* Updated inventory grid columns */
 .inventory-row {
-  grid-template-columns: 1.5fr 0.6fr 0.6fr auto;
+  grid-template-columns: 1.5fr 0.6fr 0.6fr 0.4fr auto;
+}
+
+/* New classes for inventory */
+.inventory-header {
+  background: transparent !important;
+  padding-bottom: 0.2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0;
+  margin-bottom: 0.5rem;
+}
+
+.sold-col {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  color: var(--text-muted);
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  height: 100%;
+}
+
+.text-danger {
+  color: #ff4d4f !important;
+  font-weight: bold;
 }
 
 .payment-row {
