@@ -217,9 +217,31 @@
         <div v-for="order in orders" :key="order._id" class="order-row">
             <div class="order-info">
                 <strong>Order #{{ order._id?.slice(-8)?.toUpperCase() || 'N/A' }}</strong>
-                <span>{{ order.user_id?.name || 'Unknown' }} • ${{ Number(order.total_amount || 0).toLocaleString() }}</span>
-                <span class="order-address">{{ order.shipping_address?.slice(0, 50) }}{{ order.shipping_address?.length > 50 ? '...' : '' }}</span>
-                <span class="order-date">{{ new Date(order.createdAt).toLocaleDateString() }}</span>
+                <span>{{ order.user_id?.name || 'Unknown' }} ({{ order.user_id?.email || 'no email' }}) • ${{ Number(order.total_amount || 0).toLocaleString() }}</span>
+                
+                <!-- Hiển thị items - QUAN TRỌNG -->
+                <div class="order-items">
+                    <div v-for="item in order.items" :key="item._id" class="order-item">
+                        <div class="item-info">
+                            <img v-if="item.image" :src="item.image" class="item-image" alt="item.name">
+                            <div>
+                                <div class="item-name">{{ item.name }}</div>
+                                <div class="item-detail">Quantity: {{ item.quantity }} × ${{ Number(item.price).toLocaleString() }}</div>
+                            </div>
+                        </div>
+                        <div class="item-total">
+                            ${{ Number(item.price * item.quantity).toLocaleString() }}
+                        </div>
+                    </div>
+                </div>
+                
+                <span class="order-address">
+                    {{ order.shipping_address && order.shipping_address !== 'placeholder' 
+                        ? order.shipping_address 
+                        : 'No shipping address' 
+                    }}
+                </span>
+                <span class="order-date">{{ new Date(order.createdAt).toLocaleString() }}</span>
             </div>
             <div class="order-actions">
                 <select 
@@ -771,4 +793,52 @@ onMounted(fetchDashboardData);
         grid-template-columns: 1fr;
     }
 }
+
+.order-items {
+    margin: 0.5rem 0;
+    padding: 0.5rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+}
+
+.order-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.order-item:last-child {
+    border-bottom: none;
+}
+
+.item-info {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.item-image {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+.item-name {
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.item-detail {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.item-total {
+    font-weight: bold;
+    color: #4caf50;
+}
+
 </style>
