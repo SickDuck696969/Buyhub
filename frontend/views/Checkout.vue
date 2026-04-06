@@ -56,11 +56,13 @@ import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import api from '../services/api';
 import { useCartStore } from '../stores/cart';
+import { useAuthStore } from '../stores/auth';
 import { useRoute } from 'vue-router';
 
 const router = useRouter();
 const route = useRoute();
 const cartStore = useCartStore();
+const authStore = useAuthStore();
 
 const shippingAddress = ref('');
 const paymentStatus = ref('pending');
@@ -76,10 +78,15 @@ const placeOrder = async () => {
   submitting.value = true;
   message.value = '';
 
+  console.log(authStore.token);
   const { data: order } = await api.put(`/orders/${route.path.split('/').pop()}/status`, {
         status: "pending",
         expiresAt: null,
         shippingAddress: shippingAddress.value
+  },{
+    headers: {
+      Authorization: `Bearer ${authStore.token}`
+    }
   });
 
   try {
