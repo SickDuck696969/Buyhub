@@ -7,6 +7,30 @@ const path = require("path");
 const privateKey = fs.readFileSync(path.join(__dirname, "../keys/private.key"));
 const publicKey = fs.readFileSync(path.join(__dirname, "../keys/public.key"));
 
+const sanitizeUser = (user) => {
+  const userSafe = user.toObject();
+  delete userSafe.password;
+  return userSafe;
+};
+
+const findManagedUser = async (userId) => {
+  const user = await User.findById(userId);
+
+  if (!user) {
+    const error = new Error("User not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (user.role !== "user") {
+    const error = new Error("Only user accounts can be managed here");
+    error.statusCode = 403;
+    throw error;
+  }
+
+  return user;
+};
+
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -81,12 +105,9 @@ exports.register = async (req, res) => {
 
     await newUser.save();
 
-    const userSafe = newUser.toObject();
-    delete userSafe.password;
-
     res.status(201).json({
       message: "User registered successfully",
-      data: userSafe
+      data: sanitizeUser(newUser)
     });
 
   } catch (error) {
@@ -151,23 +172,23 @@ exports.enableUser = async (req, res) => {
   try {
     const { userId } = req.body;
 
-    const user = await User.findById(userId);
-
-    if (!user) {
-      return res.status(404).json({
-        message: "User not found"
+    if (!userId) {
+      return res.status(400).json({
+        message: "userId is required"
       });
     }
 
+    const user = await findManagedUser(userId);
     user.status = true;
     await user.save();
 
     res.json({
-      message: "User enabled successfully"
+      message: "User enabled successfully",
+      data: sanitizeUser(user)
     });
 
   } catch (error) {
-    res.status(500).json({
+    res.status(error.statusCode || 500).json({
       message: error.message
     });
   }
@@ -177,23 +198,23 @@ exports.disableUser = async (req, res) => {
   try {
     const { userId } = req.body;
 
-    const user = await User.findById(userId);
-
-    if (!user) {
-      return res.status(404).json({
-        message: "User not found"
+    if (!userId) {
+      return res.status(400).json({
+        message: "userId is required"
       });
     }
 
+    const user = await findManagedUser(userId);
     user.status = false;
     await user.save();
 
     res.json({
-      message: "User disabled successfully"
+      message: "User disabled successfully",
+      data: sanitizeUser(user)
     });
 
   } catch (error) {
-    res.status(500).json({
+    res.status(error.statusCode || 500).json({
       message: error.message
     });
   }
@@ -201,29 +222,41 @@ exports.disableUser = async (req, res) => {
 
 exports.getAllUsers = async (req, res) => {
   try {
-    const { page = 1, limit = 10, search = "" } = req.query;
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 0;
+    const search = String(req.query.search || "").trim();
 
     const query = {
-      $or: [
-        { username: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } }
-      ]
+      role: "user"
     };
 
-    const users = await User.find(query)
-      .select("-password")
-      .populate("role")
-      .skip((page - 1) * limit)
-      .limit(Number(limit));
+    if (search) {
+      query.$or = [
+        { username: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+        { fullName: { $regex: search, $options: "i" } }
+      ];
+    }
 
+    let userQuery = User.find(query)
+      .select("-password")
+      .sort({ createdAt: -1 });
+
+    if (limit > 0) {
+      userQuery = userQuery
+        .skip((page - 1) * limit)
+        .limit(limit);
+    }
+
+    const users = await userQuery;
     const total = await User.countDocuments(query);
 
     res.json({
-      message: "All users",
-      currentPage: Number(page),
-      totalPages: Math.ceil(total / limit),
+      message: "All user accounts",
+      currentPage: limit > 0 ? page : 1,
+      totalPages: limit > 0 ? Math.ceil(total / limit) : 1,
       totalUsers: total,
-      data: users
+      data: users.map(sanitizeUser)
     });
 
   } catch (error) {

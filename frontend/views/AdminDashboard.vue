@@ -225,13 +225,41 @@
         </div>
       </div>
       <div class="card admin-panel">
+        <span class="pill">Users</span>
+        <h2>User Accounts</h2>
+        <div v-if="!users.length" class="status-box">No user accounts found.</div>
+        <div v-else class="user-list">
+          <div v-for="user in users" :key="user._id" class="user-row">
+            <div class="user-info">
+              <div class="user-heading">
+                <strong>{{ user.fullName || user.username }}</strong>
+                <span :class="['user-status', user.status ? 'user-status-enabled' : 'user-status-disabled']">
+                  {{ user.status ? 'Enabled' : 'Disabled' }}
+                </span>
+              </div>
+              <span>@{{ user.username }} • {{ user.email }}</span>
+              <span>Login count: {{ user.loginCount || 0 }} • Joined {{ formatDate(user.createdAt) }}</span>
+            </div>
+            <div class="action-pair">
+              <button
+                :class="user.status ? 'button-danger' : 'button-secondary'"
+                :disabled="updatingUserId === user._id"
+                @click="toggleUserStatus(user)"
+              >
+                {{ updatingUserId === user._id ? 'Saving...' : (user.status ? 'Disable' : 'Enable') }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card admin-panel">
     <span class="pill">Orders</span>
     <h2>Orders Management</h2>
     <div class="order-list">
         <div v-for="order in orders" :key="order._id" class="order-row">
             <div class="order-info">
                 <strong>Order #{{ order._id?.slice(-8)?.toUpperCase() || 'N/A' }}</strong>
-                <span>{{ order.user_id || 'Unknown' }} ({{ order.user_id?.email || 'no email' }}) • ${{ Number(order.total_amount || 0).toLocaleString() }}</span>
+                <span>{{ order.user_id._id || 'Unknown' }} ({{ order.user_id?.email || 'no email' }}) • ${{ Number(order.total_amount || 0).toLocaleString() }}</span>
                 <!-- Hiển thị items - QUAN TRỌNG -->
                 <div class="order-items">
                     <div v-for="item in order.items" :key="item._id" class="order-item">
@@ -287,6 +315,7 @@ const brands = ref([]);
 const inventory = ref([]);
 const products = ref([]);
 const payments = ref([]);
+const users = ref([]);
 const message = ref('');
 const messageType = ref('success');
 const submittingProduct = ref(false);
@@ -296,6 +325,8 @@ const editingCategoryId = ref('');
 const editingBrandId = ref('');
 const editingProductId = ref('');
 const orders = ref([]);
+const updatingUserId = ref('');
+const updatingOrderId = ref('');
 const editingOrderId = ref('');
 const orderStatusForm = ref({});
 
@@ -327,6 +358,7 @@ const productForm = ref({
   category_id: '',
   brand_id: '',
 });
+
 
 const productEditForm = ref({
   name: '',
@@ -364,15 +396,24 @@ const setMessage = (type, text) => {
   message.value = text;
 };
 
+const formatDate = (value) => {
+  if (!value) {
+    return 'Unknown';
+  }
+
+  return new Date(value).toLocaleString();
+};
+
 const fetchDashboardData = async () => {
     try {
-        const [categoriesRes, brandsRes, inventoryRes, productsRes, paymentsRes, ordersRes] = await Promise.all([
+        const [categoriesRes, brandsRes, inventoryRes, productsRes, paymentsRes, ordersRes, usersRes] = await Promise.all([
             api.get('/categories'),
             api.get('/brands'),
             api.get('/inventory'),
             api.get('/products'),
             api.get('/payments'),
             api.get('/orders/admin/all'),  // thêm vào
+            api.get('/auth/users'),
         ]);
 
         categories.value = categoriesRes.data;
@@ -381,18 +422,37 @@ const fetchDashboardData = async () => {
         products.value = productsRes.data;
         payments.value = paymentsRes.data;
         orders.value = ordersRes.data;  // thêm vào
+        users.value = usersRes.data?.data || [];
     } catch (err) {
         setMessage('error', err.response?.data?.message || 'Failed to load admin dashboard data.');
     }
 };
 
 const updateOrderStatus = async (orderId, newStatus) => {
+    updatingOrderId.value = orderId;
     try {
         await api.put(`/orders/${orderId}/status`, { status: newStatus });
         setMessage('success', 'Order status updated successfully.');
         await fetchDashboardData();
     } catch (err) {
         setMessage('error', err.response?.data?.message || 'Unable to update order status.');
+    } finally {
+        updatingOrderId.value = '';
+    }
+};
+
+const toggleUserStatus = async (user) => {
+    updatingUserId.value = user._id;
+
+    try {
+        const endpoint = user.status ? '/auth/disable' : '/auth/enable';
+        const { data } = await api.post(endpoint, { userId: user._id });
+        users.value = users.value.map((entry) => entry._id === user._id ? data.data : entry);
+        setMessage('success', data.message || 'User account updated.');
+    } catch (err) {
+        setMessage('error', err.response?.data?.message || 'Unable to update user account.');
+    } finally {
+        updatingUserId.value = '';
     }
 };
 
@@ -654,7 +714,8 @@ onMounted(fetchDashboardData);
 .tag-list,
 .inventory-list,
 .product-admin-list,
-.payment-list {
+.payment-list,
+.user-list {
   display: grid;
   gap: 0.8rem;
 }
@@ -730,6 +791,52 @@ onMounted(fetchDashboardData);
   color: var(--text-muted);
 }
 
+.user-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.8rem;
+  align-items: center;
+  padding: 0.95rem 1rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.user-info {
+  display: grid;
+  gap: 0.28rem;
+}
+
+.user-info span {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.user-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.user-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.28rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.user-status-enabled {
+  background: rgba(57, 217, 138, 0.14);
+  color: #9af2c1;
+}
+
+.user-status-disabled {
+  background: rgba(255, 103, 103, 0.14);
+  color: #ffc4c4;
+}
+
 .product-admin-actions {
   display: flex;
   align-items: center;
@@ -748,6 +855,7 @@ onMounted(fetchDashboardData);
   .form-grid.compact,
   .inventory-row,
   .payment-row,
+  .user-row,
   .tag-card,
   .product-admin-card {
     grid-template-columns: 1fr;

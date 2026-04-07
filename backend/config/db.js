@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 require('dotenv').config();
 const User = require('../schemas/User');
 const Category = require('../schemas/Category');
+const Cart = require('../schemas/Cart');
 
 const connectDB = async () => {
     try {
@@ -11,6 +12,8 @@ const connectDB = async () => {
         console.log('User indexes synced');
         await Category.syncIndexes();
         console.log('Category indexes synced');
+        await Cart.syncIndexes();
+        console.log('Cart indexes synced');
     } catch (error) {
         console.error('MongoDB connection failed:', error.message);
         process.exit(1);

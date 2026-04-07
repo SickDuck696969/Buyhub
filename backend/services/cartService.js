@@ -8,18 +8,31 @@ const Product = require('../schemas/Product');
  * @param {string} userId
  */
 const getCart = async (userId) => {
-    let cart = await Cart.findOne({ user_id: userId }).populate({
+    if (!userId) {
+        throw new Error('User is required');
+    }
+
+    const createdOrExistingCart = await Cart.findOneAndUpdate(
+        { user_id: userId },
+        {
+            $setOnInsert: {
+                user_id: userId,
+                items: [],
+            },
+        },
+        {
+            new: true,
+            upsert: true,
+        }
+    );
+
+    const cart = await Cart.findById(createdOrExistingCart._id).populate({
         path: 'items',
         populate: {
             path: 'product_id',
             model: 'Product'
         }
     });
-
-    if (!cart) {
-        cart = new Cart({ user_id: userId, items: [] });
-        await cart.save();
-    }
 
     return cart;
 };
