@@ -5,7 +5,7 @@
       <span v-if="helperText" class="field-helper">{{ helperText }}</span>
     </div>
 
-    <template v-if="multiple">
+    <template v-if="multiple && allowUrlInput">
       <div class="source-row">
         <input
           v-model="urlInput"
@@ -24,7 +24,7 @@
         </button>
       </div>
     </template>
-    <template v-else>
+    <template v-else-if="allowUrlInput">
       <input
         :value="singleValue"
         type="text"
@@ -104,6 +104,10 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  allowUrlInput: {
+    type: Boolean,
+    default: true,
+  },
   multiple: {
     type: Boolean,
     default: false,
@@ -122,7 +126,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['update:modelValue']);
+const emit = defineEmits(['update:modelValue', 'uploading-change']);
 
 const fileInput = ref(null);
 const urlInput = ref('');
@@ -204,6 +208,7 @@ const uploadFiles = async (selectedFiles) => {
   filesToUpload.forEach((file) => formData.append('images', file));
 
   isUploading.value = true;
+  emit('uploading-change', true);
   errorMessage.value = '';
 
   try {
@@ -229,6 +234,7 @@ const uploadFiles = async (selectedFiles) => {
     errorMessage.value = err.response?.data?.message || 'Unable to upload image.';
   } finally {
     isUploading.value = false;
+    emit('uploading-change', false);
   }
 };
 

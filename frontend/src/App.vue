@@ -31,9 +31,6 @@
 
     <section class="hero-strip">
       <div class="container hero-content">
-        <div>
-          <h1>Buyhub</h1>
-        </div>
         <div class="hero-stats card">
           <div>
             <strong>{{ authStore.isAuthenticated ? 'Signed in' : 'Guest' }}</strong>
@@ -176,22 +173,15 @@ const handleLogout = () => {
 }
 
 .hero-content {
-  display: grid;
-  grid-template-columns: 1.6fr 0.9fr;
-  gap: 1.2rem;
-  align-items: stretch;
-}
-
-.hero-content h1 {
-  margin: 0;
-  font-size: clamp(2rem, 5vw, 3rem);
-  line-height: 0.96;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .hero-stats {
   display: grid;
   gap: 1rem;
   padding: 1.25rem;
+  width: min(100%, 430px);
 }
 
 .hero-stats div {
@@ -218,7 +208,11 @@ const handleLogout = () => {
   }
 
   .hero-content {
-    grid-template-columns: 1fr;
+    justify-content: flex-start;
+  }
+
+  .hero-stats {
+    width: 100%;
   }
 }
 

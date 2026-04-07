@@ -3,7 +3,6 @@
     <div class="page-heading">
       <div>
         <span class="pill">Profile</span>
-        <h1 class="page-title">Profile</h1>
       </div>
     </div>
 

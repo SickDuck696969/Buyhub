@@ -2,6 +2,18 @@ const Review = require('../schemas/Review');
 const Order = require('../schemas/Order');
 const OrderItem = require('../schemas/OrderItem');
 
+const normalizeImages = (images) => {
+    if (Array.isArray(images)) {
+        return [...new Set(images.map((image) => String(image || '').trim()).filter(Boolean))];
+    }
+
+    if (typeof images === 'string') {
+        return [...new Set(images.split(/[\n,]+/).map((image) => image.trim()).filter(Boolean))];
+    }
+
+    return [];
+};
+
 /**
  * Check if a user can review a product
  * @param {string} userId
@@ -45,7 +57,7 @@ const createReview = async (userId, productId, rating, comment, images) => {
         product_id: productId,
         rating,
         comment,
-        images,
+        images: normalizeImages(images),
     });
 
     await review.save();
@@ -76,7 +88,7 @@ const updateReview = async (reviewId, userId, rating, comment, images) => {
 
     review.rating = rating;
     review.comment = comment;
-    review.images = images;
+    review.images = normalizeImages(images);
 
     await review.save();
     return review;

@@ -2,7 +2,7 @@
   <div class="review-card card">
     <div class="review-header">
       <div>
-        <strong class="review-user">{{ review.user_id?.name || 'Verified buyer' }}</strong>
+        <strong class="review-user">{{ reviewDisplayName }}</strong>
         <p class="review-date">{{ formatDate(review.createdAt) }}</p>
       </div>
       <span class="review-rating">{{ renderStars(review.rating) }}</span>
@@ -15,13 +15,19 @@
 </template>
 
 <script setup>
+import { computed } from 'vue';
 import { resolveMediaUrl } from '../utils/media';
 
-defineProps({
+const props = defineProps({
   review: {
     type: Object,
     required: true,
   },
+});
+
+const reviewDisplayName = computed(() => {
+  const user = props.review.user_id || {};
+  return user.fullName || user.username || user.email || 'Verified buyer';
 });
 
 const renderStars = (rating) => '★'.repeat(Number(rating || 0)) + '☆'.repeat(5 - Number(rating || 0));

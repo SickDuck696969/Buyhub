@@ -70,15 +70,18 @@
               v-model="reviewForm.images"
               upload-endpoint="/upload/review"
               label="Review images"
-              helper-text="Optional: paste one or more links, or upload photos from your device."
-              placeholder="Paste image links, separated by commas or new lines"
+              helper-text="Optional: upload photos from your device."
+              :allow-url-input="false"
               multiple
+              @uploading-change="isReviewImagesUploading = $event"
             />
             <label>
               <span>Comment</span>
               <textarea v-model="reviewForm.comment" placeholder="Share your experience with this product..." />
             </label>
-            <button :disabled="submittingReview">{{ submittingReview ? 'Posting...' : 'Submit review' }}</button>
+            <button :disabled="submittingReview || isReviewImagesUploading">
+              {{ isReviewImagesUploading ? 'Uploading images...' : (submittingReview ? 'Posting...' : 'Submit review') }}
+            </button>
           </form>
           <div v-else class="status-box warning">
             Sign in to add this item to cart and leave a review after delivery.
@@ -104,7 +107,7 @@ import { useCartStore } from '../stores/cart';
 import { useAuthStore } from '../stores/auth';
 import ImageUploader from '../components/ImageUploader.vue';
 import ReviewCard from '../components/ReviewCard.vue';
-import { resolveMediaUrl } from '../utils/media';
+import { dedupeMediaSources, resolveMediaUrl, splitImageSources } from '../utils/media';
 
 const fallbackImage = 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1200&q=80';
 
@@ -124,6 +127,7 @@ const actionMessageType = ref('success');
 const reviewMessage = ref('');
 const reviewMessageType = ref('success');
 const submittingReview = ref(false);
+const isReviewImagesUploading = ref(false);
 const reviewForm = ref({
   rating: 5,
   comment: '',
@@ -180,14 +184,27 @@ const handleAddToCart = async () => {
 
 const submitReview = async () => {
   reviewMessage.value = '';
+
+  if (isReviewImagesUploading.value) {
+    reviewMessageType.value = 'warning';
+    reviewMessage.value = 'Please wait for review images to finish uploading.';
+    return;
+  }
+
   submittingReview.value = true;
 
   try {
+    const normalizedImages = dedupeMediaSources(
+      Array.isArray(reviewForm.value.images)
+        ? reviewForm.value.images
+        : splitImageSources(reviewForm.value.images)
+    );
+
     const { data } = await api.post('/reviews', {
       productId: route.params.id,
       rating: reviewForm.value.rating,
       comment: reviewForm.value.comment,
-      images: reviewForm.value.images,
+      images: normalizedImages,
     });
 
     reviews.value = [data, ...reviews.value];

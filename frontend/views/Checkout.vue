@@ -3,7 +3,6 @@
     <div class="page-heading">
       <div>
         <span class="pill">Checkout</span>
-        <h1 class="page-title">Checkout</h1>
       </div>
     </div>
 

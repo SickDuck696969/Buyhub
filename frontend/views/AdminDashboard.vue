@@ -3,7 +3,6 @@
     <div class="page-heading">
       <div>
         <span class="pill">Admin</span>
-        <h1 class="page-title">Admin</h1>
       </div>
     </div>
 
@@ -12,7 +11,6 @@
     <section class="admin-grid">
       <div class="card admin-panel">
         <span class="pill">Create product</span>
-        <h2>Create product</h2>
         <form class="form-grid" @submit.prevent="submitProduct">
           <input v-model="productForm.name" type="text" placeholder="Product name" required />
           <input v-model.number="productForm.price" type="number" min="0" placeholder="Price" required />
@@ -43,7 +41,6 @@
 
       <div class="card admin-panel">
         <span class="pill">Categories</span>
-        <h2>Categories</h2>
         <form class="form-grid compact" @submit.prevent="createCategory">
           <input v-model="categoryForm.name" type="text" placeholder="Category name" required />
           <input v-model="categoryForm.description" type="text" placeholder="Description" />
@@ -80,7 +77,6 @@
     <section class="admin-grid">
       <div class="card admin-panel">
         <span class="pill">Brands</span>
-        <h2>Brands</h2>
         <form class="form-grid compact" @submit.prevent="createBrand">
           <input v-model="brandForm.name" type="text" placeholder="Brand name" required />
           <input v-model="brandForm.description" type="text" placeholder="Description" />
@@ -115,7 +111,6 @@
 
       <div class="card admin-panel">
         <span class="pill">Inventory</span>
-        <h2>Inventory</h2>
         <div class="inventory-list">
           <div class="inventory-row inventory-header">
             <div><strong>Product Info</strong></div>
@@ -152,7 +147,6 @@
     <section class="admin-grid">
       <div class="card admin-panel">
         <span class="pill">Products</span>
-        <h2>Products</h2>
         <div class="product-admin-list">
           <div v-for="product in products" :key="product._id" class="product-admin-card">
             <template v-if="editingProductId === product._id">
@@ -202,7 +196,6 @@
 
       <div class="card admin-panel">
         <span class="pill">Payments</span>
-        <h2>Payments</h2>
         <div class="payment-list">
           <form
             v-for="payment in payments"
@@ -226,7 +219,6 @@
       </div>
       <div class="card admin-panel">
         <span class="pill">Users</span>
-        <h2>User Accounts</h2>
         <div v-if="!users.length" class="status-box">No user accounts found.</div>
         <div v-else class="user-list">
           <div v-for="user in users" :key="user._id" class="user-row">
@@ -254,7 +246,6 @@
       </div>
       <div class="card admin-panel">
     <span class="pill">Orders</span>
-    <h2>Orders Management</h2>
     <div class="order-list">
         <div v-for="order in orders" :key="order._id" class="order-row">
             <div class="order-info">

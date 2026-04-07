@@ -44,7 +44,6 @@
 
       <aside class="card summary">
         <span class="pill">Summary</span>
-        <h2>Summary</h2>
         <div class="summary-line">
           <span>Items</span>
           <strong>{{ cartStore.itemCount }}</strong>
