@@ -5,7 +5,7 @@
     <template v-else-if="product">
       <section class="product-detail-grid">
         <div class="gallery card">
-          <img :src="'/' + product.main_image" :alt="product.name" />
+          <img :src="resolveMediaUrl(product.main_image, fallbackImage)" :alt="product.name" />
         </div>
 
         <div class="summary card">
@@ -65,11 +65,15 @@
                   <option :value="1">1 - Poor</option>
                 </select>
               </label>
-              <label>
-                <span>Image URLs</span>
-                <input v-model="reviewForm.images" type="text" placeholder="Optional: comma separated image URLs" />
-              </label>
             </div>
+            <ImageUploader
+              v-model="reviewForm.images"
+              upload-endpoint="/upload/review"
+              label="Review images"
+              helper-text="Optional: paste one or more links, or upload photos from your device."
+              placeholder="Paste image links, separated by commas or new lines"
+              multiple
+            />
             <label>
               <span>Comment</span>
               <textarea v-model="reviewForm.comment" placeholder="Share your experience with this product..." />
@@ -98,7 +102,9 @@ import { useRoute, useRouter } from 'vue-router';
 import api from '../services/api';
 import { useCartStore } from '../stores/cart';
 import { useAuthStore } from '../stores/auth';
+import ImageUploader from '../components/ImageUploader.vue';
 import ReviewCard from '../components/ReviewCard.vue';
+import { resolveMediaUrl } from '../utils/media';
 
 const fallbackImage = 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1200&q=80';
 
@@ -121,7 +127,7 @@ const submittingReview = ref(false);
 const reviewForm = ref({
   rating: 5,
   comment: '',
-  images: '',
+  images: [],
 });
 
 const stockClass = computed(() => {
@@ -177,22 +183,17 @@ const submitReview = async () => {
   submittingReview.value = true;
 
   try {
-    const images = reviewForm.value.images
-      .split(',')
-      .map((entry) => entry.trim())
-      .filter(Boolean);
-
     const { data } = await api.post('/reviews', {
       productId: route.params.id,
       rating: reviewForm.value.rating,
       comment: reviewForm.value.comment,
-      images,
+      images: reviewForm.value.images,
     });
 
     reviews.value = [data, ...reviews.value];
     reviewMessageType.value = 'success';
     reviewMessage.value = 'Review submitted successfully.';
-    reviewForm.value = { rating: 5, comment: '', images: '' };
+    reviewForm.value = { rating: 5, comment: '', images: [] };
   } catch (err) {
     reviewMessageType.value = 'error';
     reviewMessage.value = err.response?.data?.message || 'Unable to submit review.';
@@ -324,7 +325,7 @@ onMounted(fetchProduct);
 
 .review-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 220px);
   gap: 1rem;
 }
 

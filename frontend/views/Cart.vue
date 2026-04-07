@@ -19,7 +19,7 @@
     <section v-else class="cart-layout">
       <div class="cart-items">
         <article v-for="item in items" :key="item._id" class="cart-item card">
-          <img :src="item.product_id?.main_image || fallbackImage" :alt="item.product_id?.name" />
+          <img :src="resolveMediaUrl(item.product_id?.main_image, fallbackImage)" :alt="item.product_id?.name" />
           <div class="cart-item-content">
             <router-link :to="`/product/${item.product_id?._id}`" class="item-name">
               {{ item.product_id?.name || 'Unknown product' }}
@@ -68,6 +68,7 @@ import { useCartStore } from '../stores/cart';
 import { useRouter } from 'vue-router';
 import api from '../services/api';
 import { ref } from 'vue';
+import { resolveMediaUrl } from '../utils/media';
 
 const shippingAddress = ref('');
 

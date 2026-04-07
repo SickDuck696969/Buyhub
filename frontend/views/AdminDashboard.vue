@@ -17,7 +17,14 @@
           <input v-model="productForm.name" type="text" placeholder="Product name" required />
           <input v-model.number="productForm.price" type="number" min="0" placeholder="Price" required />
           <textarea v-model="productForm.description" placeholder="Description" required />
-          <input v-model="productForm.main_image" type="text" placeholder="Main image URL or uploaded path" required />
+          <ImageUploader
+            v-model="productForm.main_image"
+            upload-endpoint="/upload/product"
+            label="Main image"
+            helper-text="Paste a URL or upload one image from your computer."
+            placeholder="Paste an image URL or uploaded path"
+            required
+          />
           <select v-model="productForm.category_id" required>
             <option value="" disabled>Select category</option>
             <option v-for="category in categories" :key="category._id" :value="category._id">
@@ -152,7 +159,14 @@
               <div class="product-edit-grid">
                 <input v-model="productEditForm.name" type="text" placeholder="Product name" />
                 <input v-model.number="productEditForm.price" type="number" min="0" placeholder="Price" />
-                <input v-model="productEditForm.main_image" type="text" placeholder="Main image URL" />
+                <ImageUploader
+                  v-model="productEditForm.main_image"
+                  upload-endpoint="/upload/product"
+                  label="Main image"
+                  helper-text="Paste a URL or replace it with a newly uploaded image."
+                  placeholder="Paste an image URL or uploaded path"
+                  required
+                />
                 <select v-model="productEditForm.category_id">
                   <option v-for="category in categories" :key="category._id" :value="category._id">
                     {{ category.name }}
@@ -217,13 +231,12 @@
         <div v-for="order in orders" :key="order._id" class="order-row">
             <div class="order-info">
                 <strong>Order #{{ order._id?.slice(-8)?.toUpperCase() || 'N/A' }}</strong>
-                <span>{{ order.user_id?.name || 'Unknown' }} ({{ order.user_id?.email || 'no email' }}) • ${{ Number(order.total_amount || 0).toLocaleString() }}</span>
-                
+                <span>{{ order.user_id || 'Unknown' }} ({{ order.user_id?.email || 'no email' }}) • ${{ Number(order.total_amount || 0).toLocaleString() }}</span>
                 <!-- Hiển thị items - QUAN TRỌNG -->
                 <div class="order-items">
                     <div v-for="item in order.items" :key="item._id" class="order-item">
                         <div class="item-info">
-                            <img v-if="item.image" :src="item.image" class="item-image" alt="item.name">
+                            <img v-if="item.image" :src="resolveMediaUrl(item.image)" class="item-image" alt="item.name">
                             <div>
                                 <div class="item-name">{{ item.name }}</div>
                                 <div class="item-detail">Quantity: {{ item.quantity }} × ${{ Number(item.price).toLocaleString() }}</div>
@@ -265,7 +278,9 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue';
+import ImageUploader from '../components/ImageUploader.vue';
 import api from '../services/api';
+import { resolveMediaUrl } from '../utils/media';
 
 const categories = ref([]);
 const brands = ref([]);

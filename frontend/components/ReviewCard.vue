@@ -9,12 +9,14 @@
     </div>
     <p class="review-comment">{{ review.comment }}</p>
     <div v-if="review.images && review.images.length" class="review-images">
-      <img v-for="image in review.images" :key="image" :src="image" alt="Review image" />
+      <img v-for="image in review.images" :key="image" :src="resolveMediaUrl(image)" alt="Review image" />
     </div>
   </div>
 </template>
 
 <script setup>
+import { resolveMediaUrl } from '../utils/media';
+
 defineProps({
   review: {
     type: Object,

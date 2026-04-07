@@ -1,37 +1,61 @@
+const fs = require('fs');
 const multer = require('multer');
 const path = require('path');
 
-// Set storage engine
-const storage = multer.diskStorage({
-    destination: './uploads/',
-    filename: function (req, file, cb) {
-        cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
+const uploadRoot = path.join(__dirname, '..', 'uploads');
+
+const getUploadFolder = (req) => {
+    if (req.path.includes('review')) {
+        return 'reviews';
     }
+
+    return 'products';
+};
+
+const sanitizeFileName = (fileName) => {
+    const extension = path.extname(fileName).toLowerCase();
+    const baseName = path
+        .basename(fileName, extension)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 50);
+
+    return `${baseName || 'image'}-${Date.now()}${extension}`;
+};
+
+const storage = multer.diskStorage({
+    destination(req, file, cb) {
+        const folder = getUploadFolder(req);
+        const targetDirectory = path.join(uploadRoot, folder);
+
+        fs.mkdirSync(targetDirectory, { recursive: true });
+        cb(null, targetDirectory);
+    },
+    filename(req, file, cb) {
+        cb(null, sanitizeFileName(file.originalname));
+    },
 });
 
-// Check file type
 function checkFileType(file, cb) {
-    // Allowed ext
     const filetypes = /jpeg|jpg|png|webp/;
-    // Check ext
     const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-    // Check mime
     const mimetype = filetypes.test(file.mimetype);
 
     if (mimetype && extname) {
-        return cb(null, true);
-    } else {
-        cb('Error: Images Only!');
+        cb(null, true);
+        return;
     }
+
+    cb(new Error('Only JPEG, PNG, and WEBP images are allowed.'));
 }
 
-// Init upload
 const upload = multer({
-    storage: storage,
-    limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
-    fileFilter: function (req, file, cb) {
+    storage,
+    limits: { fileSize: 2 * 1024 * 1024 },
+    fileFilter(req, file, cb) {
         checkFileType(file, cb);
-    }
+    },
 });
 
 module.exports = upload;

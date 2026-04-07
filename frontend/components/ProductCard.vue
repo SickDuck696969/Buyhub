@@ -2,7 +2,7 @@
   <div class="product-card card">
     <router-link :to="`/product/${product._id}`" class="card-link">
       <div class="image-wrapper">
-        <img :src="product.main_image || fallbackImage" :alt="product.name" class="product-image" />
+        <img :src="resolveMediaUrl(product.main_image, fallbackImage)" :alt="product.name" class="product-image" />
       </div>
       <div class="product-info">
         <div class="product-meta">
@@ -23,6 +23,8 @@
 </template>
 
 <script setup>
+import { resolveMediaUrl } from '../utils/media';
+
 const fallbackImage = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=900&q=80';
 
 defineProps({
